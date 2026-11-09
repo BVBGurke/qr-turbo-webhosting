@@ -1,7 +1,7 @@
 /**
  * QR Turbo website builder.
  * Downloads a pinned MIT-licensed BeamFerry revision, builds its original
- * high-speed codec without modification, and wraps it in a German landing page.
+ * high-speed codec without modification, and wraps it in an English user-friendly interface.
  * Node.js 22+, Git and network access are required when building.
  * The FINISHED dist/ directory requires no backend or runtime dependencies.
  */
@@ -23,7 +23,7 @@ function run(executable, args, cwd = project) {
   execFileSync(executable, args, { cwd, stdio: 'inherit', env: process.env });
 }
 function requireFile(path) {
-  if (!existsSync(path)) throw new Error(`Fehlende Upstream-Datei: ${path}`);
+  if (!existsSync(path)) throw new Error(`Missing upstream file: ${path}`);
 }
 function copyFile(src, dst) {
   requireFile(src);
@@ -33,99 +33,46 @@ function copyFile(src, dst) {
 function patch(path, edits) {
   let html = readFileSync(path, 'utf8');
   for (const [find, replace] of edits) {
-    if (!html.includes(find)) throw new Error(`Upstream-Datei geändert; Patch nicht gefunden in ${path}: ${find.slice(0, 100)}`);
+    if (!html.includes(find)) throw new Error(`Upstream changed; patch not found in ${path}: ${find.slice(0, 100)}`);
     html = html.replaceAll(find, replace);
   }
   writeFileSync(path, html);
 }
 
-// Only user-interface copy is translated; the upstream coding algorithm is untouched.
-const TRANSLATIONS = [
-  ['手机网页接收端 v94 · 单码 / 四码', 'Handy-Empfänger · 1 oder 4 QR-Codes'],
-  ['电脑屏幕接收端 · 单码 / 四码', 'Bildschirm-Empfänger · 1 oder 4 QR-Codes'],
-  ['选择或拖入一个或多个文件', 'Datei auswählen oder hierher ziehen'],
-  ['生成二维码流', 'QR-Stream vorbereiten'],
-  ['二维码流已生成，可开始播放', 'QR-Stream bereit – Wiedergabe starten'],
-  ['正在生成二维码流', 'QR-Stream wird erstellt'],
-  ['四码需全部进入取景框，边缘留少量空白', 'Alle vier QR-Codes vollständig mit etwas Rand ins Bild nehmen'],
-  ['推荐发送端：四码 · 2068 B · 30 FPS。四个码完整入镜后保持手机稳定。', 'Empfohlen: 4 QR-Codes · 2068 B · 30 FPS. Smartphone ruhig halten.'],
-  ['扫码后直接打开接收页面', 'QR-Code scannen, um die Empfängerseite zu öffnen'],
-  ['选择文件并生成二维码流后，此入口会自动隐藏', 'Dieser Link wird nach dem Vorbereiten der Datei ausgeblendet'],
-  ['点击“选择屏幕源”，然后选择正在播放 BeamFerry 二维码的屏幕、窗口或浏览器标签页', 'Bildschirmquelle auswählen und den Tab oder Bildschirm mit dem QR-Stream freigeben'],
-  ['仅使用屏幕捕获，不访问摄像头。建议优先选择二维码所在的窗口或标签页，并确保完整画面未被裁切。浏览器要求页面运行在 HTTPS 或 localhost。', 'Nur Bildschirmfreigabe, keine Kamera. Bitte das Fenster mit den vollständigen QR-Codes auswählen. HTTPS oder localhost erforderlich.'],
-  ['参数说明与兼容性', 'Einstellungen und Kompatibilität'],
-  ['传输设置', 'Übertragungseinstellungen'],
-  ['每帧数据', 'Daten je QR-Code'],
-  ['播放帧率', 'Wiedergabe-FPS'],
-  ['二维码布局', 'QR-Layout'],
-  ['单码（兼容）', 'Einzel-QR (kompatibel)'],
-  ['四码（多码吞吐）', 'Vier QR-Codes (schnell)'],
-  ['双码（上排）', 'Zwei QR-Codes (oben)'],
-  ['开始播放', 'Abspielen'],
-  ['继续播放', 'Fortsetzen'],
-  ['暂停', 'Pause'],
-  ['退出全屏', 'Vollbild verlassen'],
-  ['全屏', 'Vollbild'],
-  ['等待文件', 'Warte auf Datei'],
-  ['文件已选择', 'Datei ausgewählt'],
-  ['正在读取文件', 'Datei wird gelesen'],
-  ['传输', 'Transfer'],
-  ['会话', 'Sitzung'],
-  ['片段', 'Blöcke'],
-  ['重置', 'Zurücksetzen'],
-  ['状态', 'Status'],
-  ['文件', 'Datei'],
-  ['进度', 'Fortschritt'],
-  ['速度 / 扫描', 'Geschwindigkeit / Scans'],
-  ['开始扫描', 'Scan starten'],
-  ['选择屏幕源', 'Bildschirm auswählen'],
-  ['停止', 'Stoppen'],
-  ['清空进度', 'Fortschritt löschen'],
-  ['相机', 'Kamera'],
-  ['捕获', 'Aufnahme'],
-  ['缺失片段', 'Fehlende Blöcke'],
-  ['复制编号', 'Nummern kopieren'],
-  ['诊断信息', 'Diagnose'],
-  ['复制诊断', 'Diagnose kopieren'],
-  ['文件已恢复', 'Datei wiederhergestellt'],
-  ['下载文件', 'Datei speichern'],
-  ['打开接收端', 'Empfänger öffnen'],
-  ['打开发送端', 'Sender öffnen'],
-  ['手机网页接收端', 'Handy-Empfänger'],
-  ['离线二维码文件发送端', 'Offline-QR-Sender'],
-  ['对准电脑上的二维码', 'QR-Codes am Computer scannen'],
-  ['正在打开摄像头', 'Kamera wird geöffnet'],
-  ['正在高速扫描', 'Highspeed-Scan läuft'],
-  ['正在加载解码器', 'Decoder wird geladen'],
-  ['正在快速扫描', 'Schneller Scan läuft'],
-  ['正在扫描', 'Scan läuft'],
-  ['摄像头权限被拒绝', 'Kamerazugriff verweigert'],
-  ['摄像头不可用', 'Kamera nicht verfügbar'],
-  ['请在 HTTPS 页面中允许摄像头权限', 'Kamera auf HTTPS-Seite erlauben'],
-  ['等待开始', 'Bereit'],
-  ['接收完成', 'Empfang abgeschlossen'],
-  ['接收中', 'Empfang läuft'],
-  ['正在校验', 'Datei wird geprüft'],
-  ['高速接收中', 'Highspeed-Empfang läuft'],
-  ['高速流校验失败', 'Highspeed-Datenprüfung fehlgeschlagen'],
-  ['文件 SHA-256 校验失败', 'SHA-256-Prüfung fehlgeschlagen'],
-  ['喷泉码接收中，无需等待指定片段', 'Fountain-Coding aktiv – verlorene Frames werden ausgeglichen'],
-  ['实时', 'Live'],
-  ['滚动', 'Gleitend'],
-  ['平均', 'Durchschnitt'],
-  ['推荐四码', 'Empfohlen: vier Codes'],
-  ['理论速度', 'Theoretische Rate'],
-  ['生成失败', 'Erstellung fehlgeschlagen'],
-  ['正在循环播放', 'Wiedergabe in Schleife'],
-  ['合计超过 64 MB', 'Gesamtgröße über 64 MB'],
-  ['仅在本机处理 · 不会上传', 'Nur lokal verarbeitet · kein Upload'],
-  ['复制失败', 'Kopieren fehlgeschlagen'],
-  ['已暂停', 'Pausiert'],
-];
+// English translations are applied longest-first, including runtime status messages.
+const TRANSLATIONS = JSON.parse(readFileSync(join(project, 'scripts', 'translations.json'), 'utf8'));
+const SORTED_TRANSLATIONS = Object.entries(TRANSLATIONS).sort((a, b) => b[0].length - a[0].length);
 function translateUI(path) {
   let content = readFileSync(path, 'utf8');
-  for (const [chinese, german] of TRANSLATIONS) content = content.replaceAll(chinese, german);
+  for (const [source, translated] of SORTED_TRANSLATIONS) content = content.split(source).join(translated);
   writeFileSync(path, content);
+}
+function addCommonUI(path, mode) {
+  let html = readFileSync(path, 'utf8');
+  const base = mode === 'send' ? '../' : '../';
+  const navigation = `<nav class="turbo-nav" aria-label="Main navigation">
+  <a class="turbo-logo" href="${base}">◈ QR <b>Turbo</b></a>
+  <div class="turbo-links">
+    <a href="${base}send/" class="${mode==='send'?'active':''}">Send</a>
+    <a href="${base}receive/" class="${mode==='receive'?'active':''}">Camera</a>
+    <a href="${base}screen/" class="${mode==='screen'?'active':''}">Screen</a>
+  </div>
+  <a class="turbo-home" href="${base}">Home ↗</a>
+  </nav>`;
+  html = html.replace('<body>', '<body>' + navigation);
+  html = html.replace('</head>', '<link rel="stylesheet" href="../ui.css"></head>');
+  html = html.replace(/<html lang="[^"]*">/, '<html lang="en">');
+  // Keep technical controls available without overwhelming first-time visitors.
+  if (mode === 'send') {
+    html = html.replace('<section class="control-card"', '<details class="turbo-advanced"><summary>Advanced transfer settings <span>▾</span></summary><section class="control-card"');
+    html = html.replace('</section>\n      <div class="actions">', '</section></details>\n      <div class="actions">');
+  } else {
+    html = html.replace(/<section class="card (compact-card|missing-card)">/, '<details class="turbo-advanced turbo-diagnostics"><summary>Advanced diagnostics & missing blocks <span>▾</span></summary><section class="card $1">');
+    html = html.replace(/(<section class="card diagnostics">[\s\S]*?<\/section>)/, '$1</details>');
+    html = html.replace('<div class="fps-switch"', '<div class="fps-switch"');
+  }
+  html = html.replace('</body>', '<script src="../ui.js" defer></script></body>');
+  writeFileSync(path, html);
 }
 
 try {
@@ -165,12 +112,13 @@ try {
   for (const file of ['send/index.html','receive/index.html','screen/index.html','receive/app.js','screen/app.js']) {
     translateUI(join(output, file));
   }
+  for (const [mode, path] of [['send','send/index.html'], ['receive','receive/index.html'], ['screen','screen/index.html']]) addCommonUI(join(output, path), mode);
   for (const path of ['receive', 'screen']) {
     const manifestFile = join(output, path, 'manifest.webmanifest');
     if (existsSync(manifestFile)) {
       const manifest = JSON.parse(readFileSync(manifestFile, 'utf8'));
-      manifest.lang = 'de';
-      manifest.name = path === 'screen' ? 'QR Turbo – Bildschirmempfang' : 'QR Turbo – Kameraempfang';
+      manifest.lang = 'en';
+      manifest.name = path === 'screen' ? 'QR Turbo – Screen Receiver' : 'QR Turbo – Camera Receiver';
       writeFileSync(manifestFile, JSON.stringify(manifest, null, 2));
     }
   }
@@ -195,10 +143,10 @@ try {
     requireFile(join(output, rel));
   }
   const sender = readFileSync(join(output, 'send', 'index.html'), 'utf8');
-  if (sender.includes('const RECEIVER_URL = "https://shuipashui.github.io')) throw new Error('Selbsthosting-URL wurde nicht ersetzt.');
-  console.log(`\nFERTIG: ${output}\nDieses dist/-Verzeichnis vollständig auf HTTPS-Hosting hochladen.`);
+  if (sender.includes('const RECEIVER_URL = "https://shuipashui.github.io')) throw new Error('Self-hosted receiver URL was not replaced.');
+  console.log(`\nREADY: ${output}\nUpload the entire dist/ directory to your HTTPS host.`);
 } catch (error) {
-  console.error('\nBUILD FEHLGESCHLAGEN:', error.message);
-  console.error('Prüfe Node.js 22+, Git, Internetzugang beim Build und die Upstream-Struktur.');
+  console.error('\nBUILD FAILED:', error.message);
+  console.error('Check Node.js 22+, Git, internet access during build, and the upstream file layout.');
   process.exitCode = 1;
 }
