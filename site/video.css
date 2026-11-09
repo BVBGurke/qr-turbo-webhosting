@@ -1,0 +1,54 @@
+/* Video export/import and scroll-friendly page styles */
+html,body{overflow-y:auto!important;overflow-x:hidden!important;min-height:100%!important;height:auto!important;touch-action:pan-y;overscroll-behavior-y:auto}
+body .shell{height:auto!important;max-height:none!important;min-height:calc(100dvh - 74px);overflow:visible!important;align-items:stretch}
+body .shell>.controls{height:auto!important;max-height:none!important;overflow:visible!important;min-height:0}
+body .shell>.viewer{height:clamp(360px,70dvh,1000px);min-height:360px;position:relative;overflow:hidden}
+body .app{max-height:none!important;height:auto!important;overflow:visible!important;min-height:100dvh}
+body .camera-card{min-height:260px}
+.video-export-page .shell{grid-template-columns:minmax(290px,420px) minmax(0,1fr)!important}
+.video-tool-panel{color:#eaf4fa;background:#101e2e;border:1px solid #31465e;border-radius:17px;padding:20px;margin:14px 0;font:14px/1.5 system-ui,sans-serif}
+.video-tool-panel *{box-sizing:border-box}
+.video-tool-panel h2{color:#edf9ff;font-size:20px;letter-spacing:-.02em;margin:0 0 8px}
+.video-tool-panel p{color:#a2b8ca;margin:0 0 15px;font-size:13px}
+.video-tool-panel label{display:block;color:#cfdeec;font-size:13px}
+.video-tool-panel select,.video-tool-panel input[type=file]{display:block;width:100%;margin:6px 0 12px;padding:10px;border:1px solid #456179;border-radius:10px;background:#091524;color:#eef7fb;min-height:41px;max-width:100%}
+.video-field-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.video-tool-panel .video-check{display:flex;gap:9px;align-items:center;margin:8px 0 13px;cursor:pointer}
+.video-tool-panel input[type=checkbox]{accent-color:#70e9cd;width:16px;height:16px;margin:0}
+.video-buttons{display:flex;flex-wrap:wrap;gap:8px;margin:9px 0 12px}
+.video-buttons button,.video-log-toolbar button{border:1px solid #53796e;border-radius:10px;background:#23675c;color:#effffb;font:700 13px system-ui,sans-serif;padding:11px 15px;min-height:42px;cursor:pointer}
+.video-buttons button:disabled{opacity:.46;cursor:not-allowed}
+.video-buttons button:hover:not(:disabled){background:#318474}
+.video-tool-panel progress{width:100%;height:12px;accent-color:#70e9cd;display:block;margin:9px 0}
+.video-tool-panel output{display:block;color:#bad4dc;margin:10px 0;font-size:12px;white-space:normal}
+.video-download{display:inline-block;border-radius:10px;background:#79e9cb;color:#0b2a26!important;padding:12px 16px;font-weight:750;margin-top:8px;text-decoration:none}
+.video-download[hidden]{display:none!important}
+.video-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:15px 0 19px}
+.video-metrics div{border:1px solid #27455a;border-radius:12px;background:#0b192a;padding:12px;min-width:0}
+.video-metrics span{display:block;color:#93acbe;font-size:11px;margin-bottom:6px}
+.video-metrics strong{display:block;color:#effaf7;font-size:17px;overflow-wrap:anywhere}
+.video-options{display:flex;flex-wrap:wrap;gap:8px 20px}
+.video-log-details{border:1px solid #30495a;background:#091827;border-radius:13px;margin:15px 0 0;overflow:hidden}
+.video-log-details>summary{padding:12px 14px;color:#cfefdf;cursor:pointer;font-weight:700}
+.video-log-details>summary span{color:#89aaba;font-weight:450;font-size:12px;float:right}
+.video-log-toolbar{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:9px 14px;border-top:1px solid #27445d}
+.video-log-toolbar span{font-size:11px;color:#8ca7b9}
+.video-log-toolbar button{padding:7px 10px;min-height:32px;font-size:11px}
+#videoDataLog{background:#06121e;color:#95dfcb;font:12px/1.6 ui-monospace,Menlo,Consolas,monospace;padding:16px;margin:0;max-height:290px;min-height:130px;overflow:auto;white-space:pre-wrap;word-break:break-word}
+#importGraph{width:100%;height:110px;display:block;border-radius:10px;border:1px solid #2c445b;margin:12px 0}
+.video-metadata{overflow-wrap:anywhere}
+.video-export-page .viewer.preview-hidden::after,.video-import-page .camera-card.preview-hidden::after{content:'Playback hidden · recording/decoding continues';position:absolute;inset:0;display:flex;justify-content:center;align-items:center;text-align:center;padding:24px;background:#101c2c;color:#7cebd0;font:700 17px system-ui,sans-serif;pointer-events:none;z-index:5}
+.video-import-page .app>.actions{display:none!important}
+.video-import-page .camera-card video{width:100%;height:100%;object-fit:contain;display:block}
+.video-import-page .camera-card,.video-export-page .viewer{isolation:isolate}
+@media(max-width:960px){
+  .video-export-page .shell{display:grid!important;grid-template-columns:1fr!important;grid-template-rows:auto auto!important}
+  .video-export-page .shell>.viewer{min-height:340px;height:min(85vw,580px)}
+  .video-metrics{grid-template-columns:1fr 1fr}
+}
+@media(max-width:480px){
+  .video-tool-panel{padding:15px}
+  .video-field-grid{grid-template-columns:1fr}
+  .video-buttons button{flex:1}
+  .video-metrics strong{font-size:15px}
+}
