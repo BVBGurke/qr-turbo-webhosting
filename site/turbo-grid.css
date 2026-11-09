@@ -17,3 +17,23 @@ body.oil-app .controls .control-card{transition:border-color .18s}
 body.oil-app .turbo-advanced[open]{border-color:#698c69!important}
 @media(max-width:760px){.turbo-presets{padding:12px}.turbo-presets-grid{gap:6px}body.oil-app .turbo-presets-grid button{min-height:49px;font-size:11px;padding:8px 5px}.turbo-grid-picker{width:100%;justify-content:space-between}.turbo-grid-picker select{flex:1;width:auto!important}.oil-app main.app .actions{display:flex!important;flex-wrap:wrap!important}.oil-app main.app .actions .fps-switch{flex:1 1 auto!important;min-width:190px}}
 @media(prefers-reduced-motion:reduce){body.oil-app .turbo-presets-grid button{transition:none!important}}
+
+/* QR Turbo preset-first hierarchy (Oil UI). Visible above collapsed Advanced settings. */
+.turbo-presets{gap:13px;padding:17px;border:1px solid #486b4e;background:linear-gradient(135deg,#1b3128,#11241e);border-radius:15px}
+.turbo-presets-heading{align-items:flex-end;gap:12px}
+.turbo-presets-heading>div{display:flex;flex-direction:column;gap:4px}
+.turbo-presets-kicker{font:800 9px ui-monospace,monospace;color:#baff94;letter-spacing:.12em}
+.turbo-presets-heading h3{margin:0;color:#f1f9e8;font-size:17px;line-height:1.2;letter-spacing:-.03em}
+.turbo-presets-hint{font:500 10px ui-monospace,monospace;color:#a6bdac}
+.turbo-presets-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+body.oil-app .turbo-presets-grid button{min-height:70px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:6px;padding:12px!important;text-align:left;font-size:14px!important;line-height:1.1!important;background:#11231d!important;border:1px solid #42614c!important}
+body.oil-app .turbo-presets-grid button .turbo-preset-title{font-size:13px;font-weight:800;letter-spacing:-.01em}
+body.oil-app .turbo-presets-grid button small{font-size:10px;font-weight:520;color:#a7c7af}
+body.oil-app .turbo-presets-grid button[aria-pressed=true]{border-color:#c8f56f!important;background:#294632!important;box-shadow:inset 0 0 0 1px #c8f56f66}
+body.oil-app .turbo-presets-grid button:last-child{grid-column:auto;background:#122820!important;color:#f4ffec!important;border:1px dashed #73966f!important}
+body.oil-app .turbo-presets-grid button:last-child:hover{background:#22422e!important}
+body.oil-app .turbo-presets-grid button:last-child[aria-pressed=true]{background:#26452d!important}
+.turbo-profile-info{color:#b2cab3;font-size:11px;line-height:1.5;margin:1px 0 0;min-height:0}
+body.oil-app #liveAdvancedSettings{margin:0!important}
+body.oil-app #liveAdvancedSettings>summary{min-height:52px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:14px 17px}
+@media(max-width:650px){.turbo-presets{padding:14px}.turbo-presets-heading h3{font-size:15px}body.oil-app .turbo-presets-grid button{min-height:67px;padding:10px!important}.turbo-presets-heading .turbo-presets-hint{font-size:9px}}

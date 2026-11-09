@@ -38,8 +38,12 @@ async function exportTest(page,mode,preset,software){
     buffer:Buffer.from('QR Turbo real browser E2E '+mode+'\n'+('abc123\n'.repeat(12)),'utf8')
   });
   await page.locator('#oilModeVideo').click();
-  await page.selectOption('#exportPreset',preset);
+  const card=page.locator('[data-video-preset="'+preset+'"]');
+  assert.ok(await card.isVisible(),'Preset button must be visible before export');
+  await card.click();
+  assert.equal(await page.locator('#exportPreset').inputValue(),preset,'Preset button must update the engine');
   if(mode==='dual'){
+    assert.ok(await page.locator('#exportAdvancedSettings').evaluate(el=>el.open),'Custom preset opens advanced controls');
     await page.selectOption('#exportLayout','dual');
     await page.selectOption('#exportFPS','24');
     await page.selectOption('#exportPayload','1003');

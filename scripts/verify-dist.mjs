@@ -18,6 +18,8 @@ const importHtml=readFileSync(join(dir,'import/index.html'),'utf8');
 if(!importHtml.includes('videoImportStage') || !importHtml.includes('importTogglePreview'))throw new Error('Import preview stage missing');
 if(importHtml.indexOf('id="videoImportStage"') > importHtml.indexOf('id="importGraph"'))throw new Error('Import preview stage not near video input');
 if(!sender.includes('exportRecord')||!sender.includes('video-export.js'))throw new Error('Video export UI missing');
+if(!sender.includes('data-video-preset="grid16x120"')||!sender.includes('id="exportAdvancedSettings"'))throw new Error('Preset-first video layout missing');
+if(!sender.includes('id="liveAdvancedSettings"')||!sender.includes('data-turbo-profile="overdrive"'))throw new Error('Visible live preset section missing');
 if(!receiver.includes('startLocalVideoImport')||!receiver.includes('QRTurboOnFrame'))throw new Error('Video decoder hook missing');
 if(!home.includes('href="send/#videoExportPanel"') || !home.includes('href="import/"'))throw new Error('Video navigation missing');
 if(sender.includes('https://shuipashui.github.io/beamferry/";'))throw new Error('Sender URL not self-hosted');

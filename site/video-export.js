@@ -180,7 +180,34 @@
   }
   visible?.addEventListener('change',showPreview);
   previewToggle?.addEventListener('click',()=>{visible.checked=!visible.checked;if(visible.checked&&headlessToggle&&!active&&gpuToggle?.checked)headlessToggle.checked=false;updateEngineInfo();showPreview();});
-  preset.addEventListener('change',updateProfile);
+  const presetButtons=[...document.querySelectorAll('[data-video-preset]')];
+  const advanced=$('exportAdvancedSettings');
+  const presetSummary=$('exportPresetSummary');
+  function syncPresetButtons(){
+    presetButtons.forEach(btn=>btn.setAttribute('aria-pressed',String(btn.dataset.videoPreset===preset.value)));
+    const p=selectedSettings();
+    const tiles=({single:1,dual:2,quad:4,octa:8,hexadeca:16})[p.mode]||1;
+    if(presetSummary)presetSummary.textContent=(preset.value==='custom'?'Custom':'Preset: '+preset.value)+
+      ' · '+tiles+' QR codes · '+p.fps+' FPS · '+p.bytes+' bytes per QR'+
+      (p.fps>60?' · experimental':'')+'.';
+  }
+  presetButtons.forEach(btn=>btn.addEventListener('click',()=>{
+    const id=btn.dataset.videoPreset;
+    if(id==='custom'&&preset.value!=='custom'){
+      const p=selectedSettings();
+      const layout=$('exportLayout'),fps=$('exportFPS'),payload=$('exportPayload');
+      if(layout)layout.value=p.mode;
+      if(fps)fps.value=String(p.fps);
+      if(payload)payload.value=String(p.bytes);
+    }
+    preset.value=id;
+    preset.dispatchEvent(new Event('change',{bubbles:true}));
+    if(advanced)advanced.open=id==='custom';
+    if(id==='custom')$('exportLayout')?.focus({preventScroll:true});
+  }));
+  preset.addEventListener('change',()=>{updateProfile();syncPresetButtons();});
+  for(const el of [$('exportLayout'),$('exportFPS'),$('exportPayload')])
+    el?.addEventListener('change',syncPresetButtons);
   modulesSelect?.addEventListener('change',updateEstimate);
   bitrateInput?.addEventListener('input',updateEstimate);
   durationSelect?.addEventListener('change',updateEstimate);
@@ -197,7 +224,7 @@
     setText(picker.files?.length?'File selected. Choose video quality and create your video.':'Select a file to get started.');
     updateEstimate();
   });
-  updateEngineInfo();showPreview();updateProfile();
+  updateEngineInfo();showPreview();updateProfile();syncPresetButtons();
   record.textContent='Create and download video';
   if(cancel)cancel.textContent='Cancel generation';
 
@@ -232,15 +259,22 @@
   }
   async function encoderConfig(width,height,options,preferGPU) {
     if(typeof VideoEncoder==='undefined'||typeof VideoFrame==='undefined'){
-      throw Error('Offline video export needs WebCodecs. Use a recent Chrome or Edge browser on HTTPS.');
+      throw Error('Offline video export requires WebCodecs. Use current Chrome or Edge on HTTPS.');
     }
-    for(const [codec,id] of [['vp8','vp8'],['vp09.00.10.08','vp9']]){
-      const config={codec,width,height,bitrate:options.kbps*1000,framerate:options.fps,
-        latencyMode:'realtime',hardwareAcceleration:preferGPU?'prefer-hardware':'prefer-software'};
-      try {const result=await VideoEncoder.isConfigSupported(config);if(result.supported)return {...result.config,webmCodec:id};}
-      catch{}
+    // Hardware preference is not a hard requirement: headless Chrome and some
+    // phones only provide software codecs for specific dimensions/FPS.
+    const choices=preferGPU?['prefer-hardware','prefer-software','no-preference']:['prefer-software','no-preference'];
+    for(const preference of choices)for(const [codec,id] of [['vp8','vp8'],['vp09.00.10.08','vp9']]){
+      const config={codec,width,height,bitrate:options.kbps*1000,
+        framerate:options.fps,latencyMode:'realtime'};
+      if(preference!=='no-preference')config.hardwareAcceleration=preference;
+      try {
+        const result=await VideoEncoder.isConfigSupported(config);
+        if(result.supported)return {...result.config,webmCodec:id};
+      }catch{}
     }
-    throw Error('This browser cannot encode VP8/VP9 WebM at the chosen resolution and frame rate. Choose a lower preset.');
+    throw Error('No supported WebCodecs VP8/VP9 encoder for '+width+' × '+height+' at '+options.fps+
+      ' FPS. Try fewer QR codes, smaller QR modules, or a lower FPS preset.');
   }
   function safeName(name){
     return String(name||'transfer').replace(/\.[^.]+$/,'').replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,65)||'transfer';

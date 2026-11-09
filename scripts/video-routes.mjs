@@ -139,6 +139,28 @@ export function addVideoRoutes(output) {
     <a id="exportDownload" class="video-download" hidden download>Download QR video</a>
   </section>
   <div class="status">`, exportPath);
+  // Preset-first UX: keep advanced parameters available but collapsed until requested.
+  exp = mustReplace(exp, '    <div class="video-field-grid">\n      <label>File size / reliability<select id="exportPreset">',
+    '<section class="video-preset-selector" aria-label="Video export presets">'+
+    '<header><span class="video-preset-eyebrow">STEP 2 · VIDEO QUALITY</span><h3>Choose a video preset</h3>'+
+    '<p>One tap applies the QR layout, frame rate and quality. Open Advanced settings to change everything.</p></header>'+
+    '<div class="video-preset-grid" role="group" aria-label="Video quality presets">'+
+    '<button type="button" data-video-preset="tiny" aria-pressed="false"><b>Tiny</b><small>1 QR · 10 FPS</small></button>'+
+    '<button type="button" data-video-preset="compact" aria-pressed="true"><b>Compact</b><small>1 QR · 12 FPS</small></button>'+
+    '<button type="button" data-video-preset="balanced" aria-pressed="false"><b>Balanced</b><small>4 QR · 12 FPS</small></button>'+
+    '<button type="button" data-video-preset="fast" aria-pressed="false"><b>Fast</b><small>4 QR · 20 FPS</small></button>'+
+    '<button type="button" data-video-preset="grid8" aria-pressed="false"><b>Turbo</b><small>8 QR · 24 FPS</small></button>'+
+    '<button type="button" data-video-preset="grid16" aria-pressed="false"><b>Extreme</b><small>16 QR · 20 FPS</small></button>'+
+    '<button type="button" data-video-preset="grid16x120" aria-pressed="false"><b>Overdrive</b><small>16 QR · 120 FPS</small></button>'+
+    '<button type="button" data-video-preset="custom" aria-pressed="false"><b>Custom</b><small>All settings ↗</small></button>'+
+    '</div><p class="video-preset-summary" id="exportPresetSummary" role="status" aria-live="polite"></p></section>'+
+    '<details class="video-advanced" id="exportAdvancedSettings"><summary><strong>Advanced settings</strong>'+
+    '<span>Layout · FPS · duration · compression · GPU</span></summary><div class="video-advanced-content">'+
+    '<div class="video-field-grid">\n      <label>Active preset<select id="exportPreset">', exportPath);
+  exp = mustReplace(exp, '    <div class="video-preview-controls" role="group" aria-label="Export playback preview">',
+    '    </div></details><div class="video-preview-controls" role="group" aria-label="Export playback preview">', exportPath);
+  exp = mustReplace(exp, '<input id="exportBitrate" type="number" min="160" max="16000"',
+    '<input id="exportBitrate" type="number" min="160" max="80000"', exportPath);
   exp = mustReplace(exp, '</body>', '<script src="../video-export.js" defer></script></body>', exportPath);
   writeFileSync(exportPath, exp);
   mkdirSync(join(output, "export"), { recursive: true });
