@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="de">
+<head>
+ <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+ <meta name="theme-color" content="#081114">
+ <meta name="description" content="QR Turbo Benchmark Lab: reproduzierbare Tests für den optischen V1-/V2-Dateitransfer.">
+ <title>Benchmark Lab | QR Turbo</title>
+ <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+ <link rel="stylesheet" href="benchmark.css">
+ <script src="../receive/highspeed-protocol.js"></script>
+ <script src="../turbo-protocol.js"></script>
+ <script type="module" src="benchmark-app.mjs"></script>
+</head>
+<body>
+<a class="skip-link" href="#main">Zum Inhalt springen</a>
+<header class="app-header">
+ <a class="logo" href="../"><span class="logo-symbol" aria-hidden="true">▦</span><span>QR <b>TURBO</b></span></a>
+ <span class="header-divider"></span>
+ <span class="header-name">BENCHMARK <em>LAB</em></span>
+ <nav class="header-links" aria-label="Navigation">
+  <a href="../send/">Sender</a><a href="../receive/">Kamera</a><a href="../screen/">Bildschirm</a><a href="../import/">Videoimport</a>
+ </nav>
+ <span class="header-status"><i></i> LOKAL / PRIVAT</span>
+</header>
+<nav class="mobile-navigation" aria-label="Seitennavigation">
+ <a href="#konfiguration">Setup</a><a href="#live">Live</a><a href="#matrix">Matrix</a><a href="#resultate">Ergebnisse</a>
+</nav>
+<main id="main" class="workspace">
+ <section class="page-intro">
+  <div><p class="eyebrow"><span class="signal"></span> ENTWICKLUNG / PERFORMANCE / REGRESSION</p>
+   <h1>Finde das <em>Limit.</em><br>Miss den Unterschied.</h1>
+   <p>Reproduzierbare V1-/V2-Codec-Tests, echte Dateiintegrität und nachvollziehbare Vergleiche – direkt in deinem Browser.</p></div>
+  <aside class="intro-meta">
+   <span>AKTUELLER MODUS</span><strong id="appModeBadge">Synthetischer Codec-Test</strong>
+   <span>BUILD</span><strong id="buildVersion">Version wird gelesen …</strong>
+   <a href="#messmethoden">Was wird wirklich gemessen? <span aria-hidden="true">↗</span></a>
+  </aside>
+ </section>
+ <div class="workspace-layout">
+ <div class="primary-column">
+ <section id="konfiguration" class="panel configuration-panel">
+  <div class="panel-heading"><span class="step-number">01</span><div><p class="eyebrow">TEST SETUP</p><h2>Konfiguration</h2></div>
+   <div class="view-switch" role="group" aria-label="Ansichtsmodus">
+    <button id="simpleMode" type="button" aria-pressed="true">Einfach</button>
+    <button id="advancedMode" type="button" aria-pressed="false">Erweitert</button>
+   </div>
+  </div>
+  <h3 class="input-title">Eingabequelle</h3>
+  <div class="source-grid" role="group" aria-label="Eingabequelle">
+   <button type="button" data-source="synthetic" aria-pressed="true"><b>◇</b> Codec-Test<small>Automatisiert</small></button>
+   <button type="button" data-source="camera" aria-pressed="false"><b>◎</b> Kamera<small>Live-Scanner</small></button>
+   <button type="button" data-source="video" aria-pressed="false"><b>▶</b> Video<small>Aufzeichnung</small></button>
+   <button type="button" data-source="screen" aria-pressed="false"><b>▤</b> Bildschirm<small>Capture</small></button>
+   <button type="button" data-source="stream" aria-pressed="false"><b>⇄</b> Videostream<small>Lokaler Stream</small></button>
+  </div>
+  <p id="sourceExplanation" class="note">Echter QR-Turbo-Codec: senden, FEC-decodieren und wiederhergestellte Originaldatei vergleichen. Kein optischer Kamera-Test.</p>
+  <h3 class="input-title">Ein Preset auswählen</h3>
+  <div class="presets" role="group" aria-label="Benchmark-Presets">
+   <button data-preset="safe" type="button" aria-pressed="false"><span class="preset-top">SICHER</span><b>1 QR</b><small>24 FPS</small></button>
+   <button data-preset="balanced" type="button" aria-pressed="true"><span class="preset-top">BALANCED</span><b>4 QR</b><small>30 FPS</small></button>
+   <button data-preset="fast" type="button" aria-pressed="false"><span class="preset-top">FAST</span><b>4 QR</b><small>60 FPS</small></button>
+   <button data-preset="turbo" type="button" aria-pressed="false"><span class="preset-top">TURBO</span><b>8 QR</b><small>60 FPS</small></button>
+   <button data-preset="overdrive" type="button" aria-pressed="false"><span class="preset-top">OVERDRIVE</span><b>16 QR</b><small>120 FPS</small></button>
+   <button data-preset="custom" type="button" aria-pressed="false"><span class="preset-top">CUSTOM</span><b>Eigene</b><small>Werte</small></button>
+  </div>
+  <div id="presetNotice" class="preset-notice" role="status"></div>
+  <div class="quick-config">
+   <label>QR-Anzahl<select id="grid"><option value="1">1 QR</option><option value="4" selected>4 QR · 2×2</option><option value="8">8 QR · 4×2</option><option value="16">16 QR · 4×4</option></select></label>
+   <label>Ziel-FPS<select id="fps"><option>10</option><option>12</option><option>15</option><option>20</option><option>24</option><option selected>30</option><option>45</option><option>50</option><option>60</option><option>90</option><option>120</option></select></label>
+   <label>Auflösung<select id="resolution"><option value="1280x720">720p</option><option value="1920x1080" selected>1080p</option><option value="2560x1440">1440p</option><option value="3840x2160">4K</option></select></label>
+  </div>
+  <div id="advancedSettings" class="advanced-settings" hidden>
+   <h3 class="input-title">Erweiterte Einstellungen</h3>
+   <details><summary>01 · QR-Kodierung</summary><div class="settings-grid">
+    <label>Bytes pro QR<input id="bytesPerQR" type="number" min="128" max="2953" step="1" value="1465"></label>
+    <label>Testdateigröße (KiB)<input id="fileKiB" type="number" min="1" max="4096" step="1" value="16"></label>
+    <label>Datenmuster<select id="pattern"><option value="random">Deterministisch zufällig</option><option value="zeros">Nur Nullen</option><option value="repeating">Wiederholtes Muster</option></select></label>
+    <label>Seed<input id="seed" type="number" value="13037" min="1" max="2147483647"></label>
+    <p class="settings-explainer">Modulgröße, QR-Version und Fehlerkorrektur: in diesem Codec-Lauf nicht separat messbar. Die QR-Paketgröße und das V1-/V2-Headerformat sind real.</p>
+   </div></details>
+   <details><summary>02 · Übertragung &amp; FEC</summary><div class="settings-grid">
+    <label>FEC-Sendebudget (Faktor)<input id="redundancy" type="number" min="1" max="4" step=".1" value="1.6"></label>
+    <label>Simulierter Verlust (%)<input id="lossPercent" type="number" min="0" max="70" step="1" value="0"></label>
+    <label>Duplikat jede N-te Sendung (0 = aus)<input id="duplicateEvery" type="number" min="0" max="1000" step="1" value="0"></label>
+    <p class="settings-explainer">Verluste werden deterministisch erzeugt. Das ist kein gemessener Kamerapaketverlust.</p>
+   </div></details>
+   <details><summary>03 · Kamera &amp; Aufnahme</summary><div class="settings-grid">
+    <p class="settings-explainer">Den echten Kamerascanner erreichst du über den Quellenmodus „Kamera“. Dort bleiben die bestehenden Fokus-, Zoom- und Belichtungsregler erhalten.</p>
+    <a href="../receive/" target="_blank" rel="noopener">Kamera-Studio öffnen ↗</a>
+    <a href="../screen/" target="_blank" rel="noopener">Bildschirmempfänger öffnen ↗</a>
+   </div></details>
+   <details><summary>04 · Video-Encoding</summary><div class="settings-grid">
+    <p class="settings-explainer">Codec-Benchmarks erzeugen QR-Pakete, kein Video. WebM-Generierung mit GPU-/CPU-Modus erfolgt im vorhandenen Sender.</p>
+    <a href="../send/#videoExportPanel" target="_blank" rel="noopener">WebM-Videoexport öffnen ↗</a>
+   </div></details>
+   <details><summary>05 · Decoder</summary><div class="settings-grid">
+    <p class="settings-explainer">BeamFerry-LTDecoder wird für jeden Lauf neu initialisiert; V1 und V2 bleiben unverändert. Die Originaldatei muss nach Wiederaufbau und SHA-256-Prüfung identisch sein.</p>
+    <p class="settings-explainer">Gleiche Datengröße, Seed und Paketparameter ermöglichen reproduzierbare Regressionstests.</p>
+   </div></details>
+   <details><summary>06 · GPU &amp; Headless</summary><div class="settings-grid">
+    <label>Ausführung<select id="engine"><option value="cpu" selected>CPU / JavaScript-Codec</option><option value="gpu" disabled>GPU-Codec · nicht unterstützt</option></select></label>
+    <label class="checkrow"><input id="headless" type="checkbox" checked> Ohne visuelle QR-Berechnung (Headless)</label>
+    <p class="settings-explainer">Die JS-Fountain-Code-Berechnung bietet keine GPU-Implementierung. Browser-GPU-Erkennung bedeutet nicht GPU-Codec.</p>
+   </div></details>
+   <details><summary>07 · Benchmark-Automation</summary><div class="settings-grid">
+    <label>Wiederholungen<input id="repetitions" type="number" min="1" max="20" value="1"></label>
+    <label>Aufwärmläufe<input id="warmups" type="number" min="0" max="5" value="0"></label>
+    <label>Zeitlimit (Sekunden)<input id="timeoutSec" type="number" min="1" max="120" value="30"></label>
+    <label>Regressionsschwelle (%)<input id="regressionLimit" type="number" min="1" max="90" value="15"></label>
+   </div></details>
+   <details><summary>08 · Diagnose &amp; Logging</summary><div class="settings-grid">
+    <div id="compatibility" class="diagnostic-list" aria-live="polite">Funktionen werden geprüft …</div>
+    <p class="settings-explainer">CPU-Gesamtlast, GPU-Auslastung und Thermal-Throttling: im Browser nicht zuverlässig auslesbar.</p>
+   </div></details>
+   <details><summary>09 · Export &amp; Reporting</summary><div class="settings-grid">
+    <p class="settings-explainer">Lokale Ergebnisverwaltung mit IndexedDB (Fallback: localStorage). Keine Datei wird automatisch hochgeladen.</p>
+    <div class="button-row"><button type="button" class="btn-ghost" data-export="json">JSON</button><button type="button" class="btn-ghost" data-export="csv">CSV</button><button type="button" class="btn-ghost" data-export="html">HTML-Bericht</button><button type="button" class="btn-ghost" data-export="log">Diagnoselog</button></div>
+   </div></details>
+  </div>
+  <div class="button-row main-actions">
+   <button id="startBenchmark" type="button" class="btn-primary">Benchmark starten <span aria-hidden="true">↗</span></button>
+   <button id="pauseBenchmark" type="button" class="btn-ghost" disabled>Pause</button>
+   <button id="resumeBenchmark" type="button" class="btn-ghost" disabled>Fortsetzen</button>
+   <button id="cancelBenchmark" type="button" class="btn-ghost" disabled>Abbrechen</button>
+  </div>
+  <div id="notice" class="notice" role="status" aria-live="polite">Bereit. Wähle ein Preset und starte den synthetischen Codec-Test.</div>
+ </section>
+ <section id="matrix" class="panel">
+  <div class="panel-heading"><span class="step-number">03</span><div><p class="eyebrow">AUTOMATION</p><h2>Testmatrix</h2></div><span id="matrixCount" class="small-tag">1 Konfiguration</span></div>
+  <p class="section-description">Wähle mehrere Parameter für systematische Durchläufe. Jede Kombination verwendet dieselbe Testdatei, den originalen Codec und einen eindeutigen Lauf-Identifier.</p>
+  <div class="matrix-groups">
+   <fieldset id="matrixGrids"><legend>QR-Modi</legend><label><input type="checkbox" value="1"> 1</label><label><input type="checkbox" value="4" checked> 4</label><label><input type="checkbox" value="8"> 8</label><label><input type="checkbox" value="16"> 16</label></fieldset>
+   <fieldset id="matrixFps"><legend>FPS</legend><label><input type="checkbox" value="15"> 15</label><label><input type="checkbox" value="30" checked> 30</label><label><input type="checkbox" value="60"> 60</label><label><input type="checkbox" value="90"> 90</label><label><input type="checkbox" value="120"> 120</label></fieldset>
+   <fieldset id="matrixRes"><legend>Auflösung (Label)</legend><label><input type="checkbox" value="1280x720"> 720p</label><label><input type="checkbox" value="1920x1080" checked> 1080p</label><label><input type="checkbox" value="2560x1440"> 1440p</label><label><input type="checkbox" value="3840x2160"> 4K</label></fieldset>
+  </div>
+  <p id="matrixNote" class="note">Die Auflösung ist hier ein Vergleichslabel: Der Codec allein rendert kein Video und misst keine Bildschirmauflösung.</p>
+  <div class="button-row"><button id="buildMatrix" class="btn-ghost" type="button">Matrix erstellen</button><button id="runMatrix" class="btn-primary" type="button">Alle Tests ausführen</button><button id="retryFailures" class="btn-ghost" type="button">Fehlerhafte erneut</button></div>
+  <div class="table-scroller"><table class="matrix-table"><thead><tr><th>Konfiguration</th><th>QR</th><th>FPS</th><th>Auflösung</th><th>Ausführung</th></tr></thead><tbody id="matrixRows"><tr><td colspan="5">Matrix noch nicht erstellt.</td></tr></tbody></table></div>
+ </section>
+ </div>
+ <div class="secondary-column">
+ <section id="live" class="panel live-panel">
+  <div class="panel-heading"><span class="step-number">02</span><div><p class="eyebrow">LIVE VIEW</p><h2>Testansicht</h2></div><span class="state-badge" id="runState">BEREIT</span></div>
+  <div id="sourcePreview" class="preview-shell">
+   <div class="preview-strip"><span><i class="signal"></i><span id="previewLabel">QR-Turbo-Sender</span></span><span id="previewIndicator">BEREIT</span></div>
+   <iframe title="Echter QR-Turbo-Sender" id="toolFrame" src="../send/" allow="camera; display-capture; fullscreen" loading="lazy"></iframe>
+   <div id="streamWorkspace" hidden><video id="streamVideo" autoplay muted playsinline aria-label="Lokale Videostream-Vorschau"></video><div class="button-row"><button id="startStream" type="button" class="btn-primary">Lokalen Stream öffnen</button><button id="stopStream" type="button" class="btn-ghost" disabled>Stream stoppen</button></div><p id="streamMetrics" class="note">Nur lokale MediaStreams. Beliebige Netzwerkadressen sind nicht unterstützt.</p></div>
+  </div>
+  <div class="preview-help" id="previewHelp">
+   <p>Die Vorschau enthält den **echten QR-Turbo-Sender**. Für einen QR-Vorschautest wähle die Einstellungen und klicke auf „QR-Vorschau erzeugen“.</p>
+   <button id="preparePreview" type="button" class="btn-ghost">QR-Vorschau erzeugen</button>
+   <p id="previewInfo" class="microcopy">Die Codemessung läuft unabhängig von der sichtbaren Sender-Vorschau.</p>
+  </div>
+  <div class="progress-block"><div><strong id="runProgressLabel">Kein Test aktiv</strong><span id="runProgressPercent">0 %</span></div><progress id="runProgress" max="100" value="0"></progress></div>
+  <div class="metric-cards">
+   <div><span>Codec-Durchsatz</span><strong id="metricSpeed">—</strong><small>MiB/s, gemessen</small></div>
+   <div><span>QR-Symbole</span><strong id="metricSymbols">—</strong><small>Pakete im Codec-Test</small></div>
+   <div><span>Decodelatenz P95</span><strong id="metricLatency">—</strong><small>ms, Paketverarbeitung</small></div>
+   <div><span>Wiederherstellung</span><strong id="metricRecovery">—</strong><small>Blöcke / benötigt</small></div>
+  </div>
+  <div class="chart-section"><div><h3>Durchsatz im Zeitverlauf</h3><span>Codec-Verarbeitung · nicht optisch</span></div><canvas id="liveChart" width="680" height="190" role="img" aria-label="Verlauf des gemessenen Codec-Durchsatzes"></canvas></div>
+  <div class="metric-caveat" id="metricCaveat">Optischer Goodput, CPU-%, GPU-% und Thermal-Drosselung: <b>Nicht verfügbar</b> ohne geeignete Messhardware.</div>
+ </section>
+ <section class="panel environment-panel">
+  <div class="panel-heading"><span class="step-number">↗</span><div><p class="eyebrow">SYSTEM</p><h2>Kompatibilität</h2></div></div>
+  <div id="environmentSummary" class="env-grid"><span>Browser wird geprüft …</span></div>
+ </section>
+ </div>
+ </div>
+ <section id="resultate" class="panel results-panel">
+  <div class="panel-heading"><span class="step-number">04</span><div><p class="eyebrow">HISTORY / EXPORT</p><h2>Ergebnisse &amp; Regressionen</h2></div><span id="resultCount" class="small-tag">0 Ergebnisse</span></div>
+  <div class="results-toolbar">
+   <div class="tabs" role="group" aria-label="Ergebnisse filtern">
+    <button type="button" data-filter="all" aria-pressed="true">Alle</button>
+    <button type="button" data-filter="erfolgreich" aria-pressed="false">Erfolgreich</button>
+    <button type="button" data-filter="fehlgeschlagen" aria-pressed="false">Fehlgeschlagen</button>
+    <button type="button" data-filter="wiederholt" aria-pressed="false">Wiederholt</button>
+   </div>
+   <div class="button-row"><button type="button" class="btn-ghost" data-export="csv">CSV</button><button type="button" class="btn-ghost" data-export="json">JSON</button><button type="button" class="btn-ghost" data-export="html">HTML</button><button type="button" class="btn-ghost" data-export="log">Logs</button><button id="clearResults" type="button" class="btn-subtle">Verlauf löschen</button></div>
+  </div>
+  <div class="table-scroller"><table><thead><tr><th>Vergleich</th><th>Ergebnis / Lauf</th><th>QR / FPS</th><th>Codec MiB/s</th><th>P95</th><th>Duplikate</th><th>FEC</th><th>Status</th></tr></thead><tbody id="resultRows"><tr><td colspan="8">Noch keine Benchmarks gespeichert.</td></tr></tbody></table></div>
+  <div class="compare-panel"><h3>Vergleich ausgewählter Läufe</h3><div id="comparisonResult" class="note">Markiere zwei vergleichbare Ergebnisse. Unterschiede bei Quelle, Konfiguration oder Browser werden angezeigt.</div><canvas id="comparisonChart" width="760" height="180" role="img" aria-label="Vergleich zweier Benchmark-Läufe"></canvas></div>
+ </section>
+ <section id="messmethoden" class="panel methods-panel">
+  <div class="panel-heading"><span class="step-number">?</span><div><p class="eyebrow">DATENQUALITÄT</p><h2>Was wird gemessen?</h2></div></div>
+  <div class="methods-grid">
+   <article><b>Gemessen</b><p>Codec-Laufzeit, Paketverarbeitung, Latenz-Perzentile, Datenblock-Rekonstruktion und SHA-256-Dateiintegrität.</p></article>
+   <article><b>Berechnet</b><p>Codec-MiB/s, Symbolausbeute und FEC-Overhead aus gezählten Paketen und gemessener Laufzeit.</p></article>
+   <article><b>Simuliert</b><p>Verluste und Duplikate bei ausgewählter Testrate. Ziel-FPS sind Vorgaben, keine gemessene Displayfrequenz.</p></article>
+   <article><b>Nicht verfügbar</b><p>Optischer Goodput, echte Kamera-QR-FPS, CPU-/GPU-Gesamtauslastung und thermische Drosselung in diesem Codec-Test.</p></article>
+  </div>
+  <p class="note">4×4 bei 120 FPS aktualisiert experimentell vier Kacheln pro Schritt. 16 sichtbare QR-Codes sind deshalb nicht gleich 16 neue Symbole pro Bildwechsel. Die Originalscanner sind über die Quellenwahl erreichbar, aber deren Hardwareleistung wird hier nicht als synthetische Codec-Messung ausgegeben.</p>
+ </section>
+ <footer class="footer"><span>QR TURBO · BENCHMARK LAB</span><span>V1 / V2 · LOKALE VERARBEITUNG · KEINE UPLOADS</span><a href="../">Zur Website ↗</a></footer>
+</main>
+</body>
+</html>
