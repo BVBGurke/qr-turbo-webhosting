@@ -44,5 +44,5 @@ const legacy=H.packFrame({layoutCodes:4},new Uint8Array([1,2,3]));
 assert.equal(legacy[0],209);
 assert.equal(H.parseFrame(legacy).header.layoutCodes,4);
 assert.equal(H.streamIdentity({layoutCodes:4}),'legacy:4');
-assert.throws(()=>H.packFrame({...header,layoutCodes:16,tileIndex:16},block),/tile index/);
+assert.throws(()=>H.packFrame({...header,layoutCodes:16,tileIndex:16},block),/QR index/);
 console.log('Turbo V2 header tests passed: 8/16 layouts, 32-bit k, tile index, corruption, V1 fallback.');
