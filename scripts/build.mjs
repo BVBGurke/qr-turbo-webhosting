@@ -1,7 +1,7 @@
 /**
  * QR Turbo website builder.
  * Downloads a pinned MIT-licensed BeamFerry revision, builds its original
- * high-speed codec without modification, and wraps it in an English user-friendly interface.
+ * high-speed codec with protocol-safe larger-file support, and wraps it in an English user-friendly interface.
  * Node.js 22+, Git and network access are required when building.
  * The FINISHED dist/ directory requires no backend or runtime dependencies.
  */
@@ -12,6 +12,7 @@ import { dirname, join, resolve } from 'node:path';
 import { addVideoRoutes } from './video-routes.mjs';
 import { improveOilUI } from './oil-routes.mjs';
 import { addOfflineSenderHooks } from './offline-sender.mjs';
+import { removeFixedTransferCaps } from './size-limits.mjs';
 
 const project = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const output = join(project, 'dist');
@@ -101,6 +102,7 @@ try {
   copyFile(join(upstream, 'sender', 'dist', 'beamferry-sender.html'), join(output, 'send', 'index.html'));
   copyFile(join(upstream, 'LICENSE'), join(output, 'licenses', 'BEAMFERRY-MIT.txt'));
   copyFile(join(upstream, 'THIRD_PARTY_NOTICES.md'), join(output, 'licenses', 'THIRD_PARTY_NOTICES.md'));
+  removeFixedTransferCaps(output);
 
   // Replace upstream's dense Chinese-language help paragraph with a concise English guide.
   const senderHelp = join(output, 'send', 'index.html');
@@ -167,7 +169,7 @@ try {
     basedOn: 'shuipashui/beamferry',
     upstreamRef: process.env.UPSTREAM_DIR ? 'local checkout' : UPSTREAM_REF,
     createdAt: new Date().toISOString(),
-    note: 'The original BeamFerry QR protocol and WASM decoder are used unchanged.',
+    note: 'BeamFerry QR format preserved; fixed 64 MiB app cap removed, on-wire size and block limits enforced.',
   }, null, 2));
   for (const rel of ['index.html', 'send/index.html', 'receive/index.html', 'screen/index.html', 'receive/vendor/decimen/zxing_reader-EOacYbLr.wasm', 'export/index.html', 'import/index.html', 'video-export.js', 'video-import.js']) {
     requireFile(join(output, rel));

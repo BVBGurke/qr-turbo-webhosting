@@ -14,7 +14,7 @@ function insertVideoReceiverHooks(source) {
     String.raw`  async function startLocalVideoImport() {
     const selected = document.getElementById("videoImportFile")?.files?.[0];
     if (!selected) throw new Error("Choose a video first.");
-    if (selected.size > 1024 * 1024 * 1024) throw new Error("Videos over 1 GB are not supported.");
+    // The selected video is loaded via a local object URL; no fixed 1 GB cap.
     if (window.QRTurboVideoURL) URL.revokeObjectURL(window.QRTurboVideoURL);
     window.QRTurboVideoURL = URL.createObjectURL(selected);
     stream = { getTracks: () => [], getVideoTracks: () => [] };

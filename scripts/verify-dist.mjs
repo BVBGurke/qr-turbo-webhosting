@@ -46,3 +46,22 @@ const importerUI=readFileSync(join(dir,'import/index.html'),'utf8');
 if(!importerUI.includes('videoImportSpeed'))throw new Error('High-FPS import speed control missing');
 if(!readFileSync(join(dir,'video-import.js'),'utf8').includes('playbackRate = speed'))throw new Error('Import analysis speed not wired');
 console.log('Video import playback speed control verified.');
+
+for (const path of ['send/index.html','receive/highspeed-protocol.js','screen/highspeed-protocol.js','import/highspeed-protocol.js']) {
+  const source = readFileSync(join(dir,path),'utf8');
+  if (!source.includes('MAX_FILE_BYTES:4294967295') || source.includes('MAX_FILE_BYTES:67108864')) {
+    throw new Error('Legacy high-speed protocol cap still exists: '+path);
+  }
+}
+for (const path of ['receive/app.js','screen/app.js','import/app.js']) {
+  const source = readFileSync(join(dir,path),'utf8');
+  if (!source.includes('MAX_FILE_SIZE = 0xffffffff') ||
+      !source.includes('header.k !== Math.ceil(header.totalLen / header.blockLen)')) {
+    throw new Error('Large transfer receiver guard missing: '+path);
+  }
+}
+if (!sender.includes('requiredBlocks > 0xffff') || sender.includes('if (total > limit)')) {
+  throw new Error('Sender is missing protocol-derived block-count validation');
+}
+if (receiver.includes('Videos over 1 GB are not supported.')) throw new Error('Legacy 1 GiB video input cap remains');
+console.log('Fixed upload caps removed; protocol format boundaries preserved.');

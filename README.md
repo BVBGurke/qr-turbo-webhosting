@@ -59,7 +59,7 @@ BeamFerry documents **425 KB/s** in a Windows/Edge screen-capture reference test
 
 Start with four codes at **2068 B / 30 FPS**. If scanning is unreliable, try 1465 B or a larger fullscreen display.
 
-The browser receiver has a **64 MiB file-size limit**. Optical transfers are not encrypted: anyone who can record the codes may reconstruct the file. Encrypt sensitive files before sending.
+**Fixed 64 MiB file-size restriction removed:** The sender and receiver accept larger files, and video import no longer blocks files over 1 GB. This does **not** make transfers unlimited: the current BeamFerry QR format stores file lengths in a 32-bit field and uses up to **65,535 QR blocks** (16-bit count). Maximum transfer size depends on *Bytes per code*: for four QR codes at 2068 bytes each, roughly **128 MiB of packed data** fits in one transfer session. If a file exceeds that capacity, the sender explains how to increase the payload or split the file. Browser RAM, compression, camera scanning and video codecs impose additional practical limits. Optical transfers are not encrypted; encrypt sensitive files before sharing.
 
 The hosted site serves the static application files; transferred file contents are processed on the devices, not uploaded to the website. An internet connection is required to load uncached assets initially, and Pico CSS is requested from a public CDN (local styling is included as fallback).
 
