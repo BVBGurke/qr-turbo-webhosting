@@ -1,323 +1,285 @@
+/* QR Turbo video export: offline WebCodecs, no realtime MediaRecorder.
+ * Files, packetization, WebM muxing and downloading run entirely locally.
+ */
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
-  const videoCanvas = $('exportEncodedPreview');
-  const liveCanvas = $('qrCanvas');
-  const liveViewer = liveCanvas?.closest('.viewer');
-  const previewStage = $('encodedPreviewStage');
-  const previewPlaceholder = $('exportPreviewPlaceholder');
-  const recordButton = $('exportRecord');
-  const stopButton = $('exportStop');
-  const prepareButton = $('prepareBtn');
-  const playButton = $('playBtn');
-  const fileInput = $('fileInput');
-  const presetInput = $('exportPreset');
-  const durationInput = $('exportDuration');
-  const moduleInput = $('exportModulePx');
+  const canvas = $('exportEncodedPreview');
+  const picker = $('fileInput');
+  const record = $('exportRecord');
+  const cancel = $('exportStop');
+  const prepare = $('prepareBtn');
+  const play = $('playBtn');
+  const preset = $('exportPreset');
+  const durationSelect = $('exportDuration');
+  const modulesSelect = $('exportModulePx');
   const bitrateInput = $('exportBitrate');
-  const visibleInput = $('exportPreview');
+  const visible = $('exportPreview');
   const previewToggle = $('exportTogglePreview');
   const previewState = $('exportPreviewState');
-  const status = $('exportStatus');
-  const estimate = $('exportEstimatedSize');
+  const stage = $('encodedPreviewStage');
+  const placeholder = $('exportPreviewPlaceholder');
   const progress = $('exportProgress');
-  const download = $('exportDownload');
-  if (!videoCanvas || !recordButton || !fileInput || !prepareButton || !playButton) return;
+  const estimate = $('exportEstimatedSize');
+  const status = $('exportStatus');
+  const link = $('exportDownload');
+  if(!canvas || !picker || !record || !prepare || !preset) return;
 
-  const PROFILES = Object.freeze({
-    tiny: { mode: 'single', bytes: 1003, fps: 10, px: 2, kbps: 260, redundancy: 3.5 },
-    compact: { mode: 'single', bytes: 1003, fps: 12, px: 3, kbps: 700, redundancy: 3.0 },
-    balanced: { mode: 'quad', bytes: 1003, fps: 12, px: 3, kbps: 2200, redundancy: 2.7 },
-    fast: { mode: 'quad', bytes: 1465, fps: 20, px: 4, kbps: 6000, redundancy: 2.5 }
+  const ctx = canvas.getContext('2d', {alpha:false});
+  if(!ctx) return;
+  const profiles = Object.freeze({
+    tiny:{mode:'single',bytes:1003,fps:10,px:2,kbps:260,redundancy:3.6},
+    compact:{mode:'single',bytes:1003,fps:12,px:3,kbps:700,redundancy:3.0},
+    balanced:{mode:'quad',bytes:1003,fps:12,px:3,kbps:2200,redundancy:2.8},
+    fast:{mode:'quad',bytes:1465,fps:20,px:4,kbps:6000,redundancy:2.6}
   });
-  const MIN_SECONDS = 12;
-  const MAX_AUTO_SECONDS = 900;
-  const QUIET_MODULES = 4;
-  const imageCache = new WeakMap();
-  const ctx = videoCanvas.getContext('2d', { alpha: false });
-  let latestPatterns = null;
-  let track = null;
-  let stream = null;
-  let recorder = null;
-  let recorderChunks = [];
-  let recording = false;
-  let preparing = false;
-  let startedAt = 0;
-  let targetSeconds = 0;
-  let elapsedTimer = 0;
-  let paintedFrames = 0;
-  let finalUrl = null;
-  let fileLabel = '';
-  let lastMeta = null;
-
-  const formatBytes = n => n >= 1048576 ? (n / 1048576).toFixed(2) + ' MiB'
-    : n >= 1024 ? (n / 1024).toFixed(1) + ' KiB' : Math.round(n) + ' B';
-  function message(text) { status.textContent = text; }
-  function setState(text) { if (previewState) previewState.textContent = text; }
-  function currentProfile() { return PROFILES[presetInput.value] || PROFILES.compact; }
-  function readSettings() {
-    const profile = currentProfile();
-    const px = Math.max(2, Math.min(5, Number(moduleInput.value) || profile.px));
-    const kbps = Math.max(160, Math.min(16000, Number(bitrateInput.value) || profile.kbps));
-    return { ...profile, px, kbps, bitrate: kbps * 1000 };
-  }
-  function supportedMime() {
-    if (typeof MediaRecorder === 'undefined') return '';
-    const formats = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'];
-    return formats.find(mime => MediaRecorder.isTypeSupported?.(mime)) || '';
-  }
-  function updatePreview() {
-    const visible = Boolean(visibleInput.checked);
-    liveViewer?.classList.toggle('preview-hidden', !visible);
-    previewStage?.classList.toggle('preview-hidden', !visible);
-    if (previewToggle) {
-      previewToggle.textContent = visible ? 'Hide preview' : 'Show preview';
-      previewToggle.setAttribute('aria-pressed', String(visible));
+  const BYTES = n => n >= 1048576 ? (n/1048576).toFixed(2)+' MiB' : n >= 1024 ? (n/1024).toFixed(1)+' KiB' : Math.floor(n)+' B';
+  const tiles = new WeakMap();
+  const QUIET = 4;
+  const MAX_FRAMES=30000;
+  const MODE_PIXELS={single:1,quad:2};
+  let active=false, controller=null, linkUrl=null, meta=null, lastFrame=null, generationStart=0;
+  let savedPreparingDisabled=false;
+  const setText = t => {if(status)status.textContent=t;};
+  const setState = t => {if(previewState)previewState.textContent=t;};
+  const yieldUI = () => new Promise(resolve => setTimeout(resolve,0));
+  function selectedSettings() {
+    let p = profiles[preset.value] || profiles.compact;
+    if(preset.value==='custom') {
+      p = {mode:$('exportLayout')?.value==='single'?'single':'quad',
+        bytes:Number($('exportPayload')?.value)||1003,
+        fps:Number($('exportFPS')?.value)||30,
+        px:3,kbps:1400,redundancy:3.0};
     }
+    const px = Math.max(2,Math.min(5,Number(modulesSelect?.value)||p.px));
+    const kbps = Math.max(160,Math.min(16000,Number(bitrateInput?.value)||p.kbps));
+    return {...p,px,kbps};
   }
-  visibleInput?.addEventListener('change', updatePreview);
-  previewToggle?.addEventListener('click', () => {
-    visibleInput.checked = !visibleInput.checked;
-    updatePreview();
+  function updateProfile() {
+    const p=profiles[preset.value];
+    const custom=$('exportCustomSettings');
+    if(custom)custom.hidden=preset.value!=='custom';
+    if(p){if(modulesSelect)modulesSelect.value=String(p.px);if(bitrateInput)bitrateInput.value=String(p.kbps);}
+    updateEstimate();
+  }
+  function estimatedSeconds(m,p) {
+    const files=Array.from(picker.files||[]);
+    const total=files.reduce((n,f)=>n+f.size,0);
+    const packets= m?.k || (files.length ? Math.ceil((total+512)/Math.max(1,p.bytes-20)) : 0);
+    if(!packets)return null;
+    const codesPerFrame = p.mode==='quad' ? (p.fps>60 ? 2:4) : 1;
+    return Math.max(12,Math.ceil((packets*p.redundancy)/(p.fps*codesPerFrame) + 5));
+  }
+  function updateEstimate() {
+    const p=selectedSettings();
+    const calculated=estimatedSeconds(meta,p);
+    const seconds=durationSelect?.value==='auto' ? calculated : Number(durationSelect?.value);
+    const count=lastFrame?.find(Boolean)?.count || (p.bytes<=1003?105:p.bytes<=1273?117:p.bytes<=1465?125:149);
+    const width=(count+QUIET*2)*p.px*(MODE_PIXELS[p.mode]||1);
+    const size=seconds ? BYTES(seconds*p.kbps*1000/8):'—';
+    if(estimate)estimate.textContent=width+' × '+width+' pixels · '+p.fps+' FPS · '+p.kbps+' kbps target · '+
+      (seconds?seconds+' seconds':'select a file')+' · estimated '+size+
+      ' · generated locally, without realtime recording';
+    return {settings:p,seconds,calculated,width};
+  }
+  function tile(pattern) {
+    let image=tiles.get(pattern);
+    if(image)return image;
+    const side=pattern.count+2*QUIET;
+    image=document.createElement('canvas');image.width=image.height=side;
+    const context=image.getContext('2d',{alpha:false});
+    const pixels=context.createImageData(side,side);
+    pixels.data.fill(255);
+    for(let y=0;y<pattern.count;y++)for(let x=0;x<pattern.count;x++){
+      if(!pattern.dark[y*pattern.count+x])continue;
+      const pos=((y+QUIET)*side+x+QUIET)*4;
+      pixels.data[pos]=pixels.data[pos+1]=pixels.data[pos+2]=0;
+    }
+    context.putImageData(pixels,0,0);
+    tiles.set(pattern,image);
+    return image;
+  }
+  function paint(patterns,p) {
+    const first=patterns?.find(Boolean);
+    if(!first)throw Error('No QR frames generated');
+    lastFrame=patterns;
+    const cols=patterns.length>=4?2:1;
+    const side=(first.count+QUIET*2)*p.px*cols;
+    const even=side+(side%2);
+    if(canvas.width!==even||canvas.height!==even){canvas.width=canvas.height=even;}
+    ctx.imageSmoothingEnabled=false;ctx.fillStyle='#fff';ctx.fillRect(0,0,even,even);
+    const tileSide=(first.count+QUIET*2)*p.px;
+    for(let i=0;i<patterns.length;i++){
+      const item=patterns[i];if(!item)continue;
+      ctx.drawImage(tile(item),(i%cols)*tileSide,Math.floor(i/cols)*tileSide,tileSide,tileSide);
+    }
+    if(placeholder)placeholder.hidden=true;
+  }
+  function showPreview() {
+    const show=!!visible?.checked;
+    stage?.classList.toggle('preview-hidden',!show);
+    if(previewToggle){previewToggle.textContent=show?'Hide preview':'Show preview';previewToggle.setAttribute('aria-pressed',String(show));}
+  }
+  visible?.addEventListener('change',showPreview);
+  previewToggle?.addEventListener('click',()=>{visible.checked=!visible.checked;showPreview();});
+  preset.addEventListener('change',updateProfile);
+  modulesSelect?.addEventListener('change',updateEstimate);
+  bitrateInput?.addEventListener('input',updateEstimate);
+  durationSelect?.addEventListener('change',updateEstimate);
+  for(const id of ['exportLayout','exportFPS','exportPayload'])$(id)?.addEventListener('change',updateEstimate);
+  picker.addEventListener('change',()=>{
+    meta=null;lastFrame=null;
+    if(linkUrl){URL.revokeObjectURL(linkUrl);linkUrl=null;}
+    link.hidden=true;progress.value=0;
+    setText(picker.files?.length?'File selected. Choose video quality and create your video.':'Select a file to get started.');
+    updateEstimate();
   });
-  updatePreview();
+  showPreview();updateProfile();
+  record.textContent='Create and download video';
+  if(cancel)cancel.textContent='Cancel generation';
 
-  function applyProfileToInputs() {
-    const p = currentProfile();
-    moduleInput.value = String(p.px);
-    bitrateInput.value = String(p.kbps);
-    updateEstimatedSize();
-  }
-  function estimateSeconds(meta, p) {
-    if (!meta?.k) return null;
-    const payloadsPerScreen = p.mode === 'quad' ? 4 : 1;
-    return Math.max(MIN_SECONDS, Math.ceil((meta.k * p.redundancy) / (p.fps * payloadsPerScreen) + 6));
-  }
-  function updateEstimatedSize() {
-    const p = readSettings();
-    const automatic = estimateSeconds(lastMeta, p);
-    const chosen = durationInput.value === 'auto' ? automatic : Number(durationInput.value);
-    const modules = latestPatterns?.find(Boolean)?.count ?? (p.bytes <= 1003 ? 105 : p.bytes <= 1273 ? 117 : 125);
-    const width = (modules + 2 * QUIET_MODULES) * p.px * (p.mode === 'quad' ? 2 : 1);
-    const pixels = width % 2 ? width + 1 : width;
-    const secondsText = chosen === null ? 'after preparation' : `${chosen} s`;
-    const estimateBytes = chosen === null ? '—' : formatBytes(p.bitrate * chosen / 8);
-    estimate.textContent = `${pixels} × ${pixels} px · ${p.kbps} kbps requested · ${p.fps} FPS · ${secondsText} · est. ${estimateBytes}`;
-    return { p, chosen };
-  }
-  presetInput?.addEventListener('change', applyProfileToInputs);
-  moduleInput?.addEventListener('change', updateEstimatedSize);
-  bitrateInput?.addEventListener('input', updateEstimatedSize);
-  durationInput?.addEventListener('change', updateEstimatedSize);
-  applyProfileToInputs();
-
-  function tileCanvas(pattern) {
-    let tile = imageCache.get(pattern);
-    if (tile) return tile;
-    const side = pattern.count + QUIET_MODULES * 2;
-    tile = document.createElement('canvas');
-    tile.width = side;
-    tile.height = side;
-    const tc = tile.getContext('2d', { alpha: false });
-    const image = tc.createImageData(side, side);
-    image.data.fill(255);
-    for (let y = 0; y < pattern.count; y++) {
-      for (let x = 0; x < pattern.count; x++) {
-        if (!pattern.dark[y * pattern.count + x]) continue;
-        const index = ((y + QUIET_MODULES) * side + x + QUIET_MODULES) * 4;
-        image.data[index] = image.data[index + 1] = image.data[index + 2] = 0;
-      }
+  function applySender(p) {
+    const qrMode=$('qrMode'),fps=$('fps'),chunkSize=$('chunkSize');
+    if(!qrMode || !fps || !chunkSize)throw Error('Sender settings are unavailable');
+    qrMode.value=p.mode;
+    qrMode.dispatchEvent(new Event('change',{bubbles:true}));
+    fps.value=String(p.fps);
+    chunkSize.value=String(p.bytes);
+    if(fps.value!==String(p.fps)||chunkSize.value!==String(p.bytes)) {
+      throw Error('This QR layout / FPS / payload combination is not supported.');
     }
-    tc.putImageData(image, 0, 0);
-    imageCache.set(pattern, tile);
-    return tile;
+    fps.dispatchEvent(new Event('change',{bubbles:true}));
+    chunkSize.dispatchEvent(new Event('change',{bubbles:true}));
   }
-  function paintQrFrame(patterns) {
-    if (!patterns?.length) return;
-    latestPatterns = patterns;
-    const valid = patterns.find(Boolean);
-    if (!valid) return;
-    if (!recording && !preparing) return; // no extra encoding overhead during normal live playback
-    const p = readSettings();
-    const columns = patterns.length === 4 ? 2 : 1;
-    const rows = columns;
-    const tileSize = (valid.count + QUIET_MODULES * 2) * p.px;
-    const side = tileSize * columns;
-    const evenSide = side + (side % 2);
-    if (videoCanvas.width !== evenSide || videoCanvas.height !== evenSide) {
-      videoCanvas.width = evenSide;
-      videoCanvas.height = evenSide;
-    }
-    ctx.imageSmoothingEnabled = false;
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(0, 0, videoCanvas.width, videoCanvas.height);
-    for (let index = 0; index < patterns.length; index++) {
-      const pattern = patterns[index];
-      if (!pattern) continue;
-      const x = (index % columns) * tileSize;
-      const y = Math.floor(index / columns) * tileSize;
-      const tile = tileCanvas(pattern);
-      ctx.drawImage(tile, x, y, tileSize, tileSize);
-    }
-    if (previewPlaceholder) previewPlaceholder.hidden = true;
-    if (recording && recorder?.state === 'recording') {
-      paintedFrames++;
-      try { track?.requestFrame?.(); } catch (_) {} // supported browsers: exact frame sequence
-    }
-  }
-  window.QRTurboOnQRRender = paintQrFrame;
-  function applySenderSettings(p) {
-    const qrMode = $('qrMode'), fps = $('fps'), chunkSize = $('chunkSize');
-    qrMode.value = p.mode;
-    qrMode.dispatchEvent(new Event('change', { bubbles: true }));
-    fps.value = String(p.fps);
-    chunkSize.value = String(p.bytes);
-    if (fps.value !== String(p.fps) || chunkSize.value !== String(p.bytes)) {
-      throw new Error('This sender does not support the selected compact video profile.');
-    }
-    fps.dispatchEvent(new Event('change', { bubbles: true }));
-    chunkSize.dispatchEvent(new Event('change', { bubbles: true }));
-  }
-  function prepareFreshSequence() {
-    return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => cleanup(new Error('QR preparation timed out.')), 60000);
-      function cleanup(error, meta) {
-        clearTimeout(timer);
-        window.removeEventListener('qr-turbo:prepared', onReady);
-        window.removeEventListener('qr-turbo:prepare-error', onError);
-        if (error) reject(error); else resolve(meta);
-      }
-      const onReady = event => cleanup(null, event.detail);
-      const onError = event => cleanup(new Error(String(event.detail || 'Preparation failed.')));
-      window.addEventListener('qr-turbo:prepared', onReady);
-      window.addEventListener('qr-turbo:prepare-error', onError);
-      prepareButton.click();
+  function prepareSequence(signal) {
+    return new Promise((resolve,reject)=>{
+      let settled=false;
+      const cleanup=()=>{clearTimeout(timer);window.removeEventListener('qr-turbo:prepared',ready);window.removeEventListener('qr-turbo:prepare-error',failed);signal.removeEventListener('abort',aborted);};
+      const finish=(error,info)=>{if(settled)return;settled=true;cleanup();if(error)reject(error);else resolve(info);};
+      const ready=e=>finish(null,e.detail);
+      const failed=e=>finish(new Error(String(e.detail||'Could not prepare QR frames')));
+      const aborted=()=>finish(new DOMException('Export cancelled','AbortError'));
+      const timer=setTimeout(()=>finish(new Error('QR preparation timed out')),90000);
+      window.addEventListener('qr-turbo:prepared',ready);
+      window.addEventListener('qr-turbo:prepare-error',failed);
+      signal.addEventListener('abort',aborted,{once:true});
+      prepare.disabled=false;
+      prepare.click();
     });
   }
-  function stopStream() {
-    try { stream?.getTracks().forEach(t => t.stop()); } catch (_) {}
-    track = null;
-    stream = null;
-  }
-  function stopLivePlayback() {
-    if (playButton && /^pause$/i.test(playButton.textContent.trim())) playButton.click();
-  }
-  function stopRecording() {
-    if (!recording) return;
-    recording = false;
-    clearInterval(elapsedTimer);
-    elapsedTimer = 0;
-    stopButton.disabled = true;
-    stopLivePlayback();
-    setState('Finishing');
-    message(`Finalizing video · ${paintedFrames} QR updates captured…`);
-    if (recorder?.state === 'recording' || recorder?.state === 'paused') {
-      try { recorder.stop(); } catch (error) { message('Failed to finish video: ' + error.message); stopStream(); recordButton.disabled = false; }
-    } else { stopStream(); recordButton.disabled = false; }
-  }
-  async function recordVideo() {
-    if (preparing || recording) return;
-    if (!fileInput.files?.length && prepareButton.disabled) { message('Choose a file first.'); return; }
-    if (typeof MediaRecorder === 'undefined' || typeof videoCanvas.captureStream !== 'function') {
-      message('Video export requires MediaRecorder and canvas capture. Try a current desktop browser.');
-      return;
+  async function encoderConfig(width,height,options) {
+    if(typeof VideoEncoder==='undefined'||typeof VideoFrame==='undefined'){
+      throw Error('Offline video export needs WebCodecs. Use a recent Chrome or Edge browser on HTTPS.');
     }
-    preparing = true;
-    recordButton.disabled = true;
-    download.hidden = true;
-    download.removeAttribute('href');
-    if (finalUrl) { URL.revokeObjectURL(finalUrl); finalUrl = null; }
+    for(const [codec,id] of [['vp8','vp8'],['vp09.00.10.08','vp9']]){
+      const config={codec,width,height,bitrate:options.kbps*1000,framerate:options.fps,latencyMode:'realtime'};
+      try {const result=await VideoEncoder.isConfigSupported(config);if(result.supported)return {...result.config,webmCodec:id};}
+      catch{}
+    }
+    throw Error('This browser cannot encode VP8/VP9 WebM at the chosen resolution and frame rate. Choose a lower preset.');
+  }
+  function safeName(name){
+    return String(name||'transfer').replace(/\.[^.]+$/,'').replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,65)||'transfer';
+  }
+  async function createVideo() {
+    if(active)return;
+    if(!picker.files?.length){setText('Choose a file first.');return;}
+    if(typeof window.QRTurboOfflineFrames!=='function'){
+      setText('Offline export is unavailable. Refresh the page and try again.');return;
+    }
+    if(!('isSecureContext' in window)||!window.isSecureContext){
+      setText('WebCodecs requires HTTPS or localhost.');return;
+    }
+    active=true;
+    controller=new AbortController();
+    const {signal}=controller;
+    record.disabled=true;cancel.disabled=false;link.hidden=true;
+    if(linkUrl){URL.revokeObjectURL(linkUrl);linkUrl=null;}
     setState('Preparing');
-    const settings = readSettings();
-    const mime = supportedMime();
+    progress.value=0;
+    let encoder=null;
+    const originallyDisabled=prepare.disabled;
     try {
-      stopLivePlayback();
-      latestPatterns = null;
-      lastMeta = null;
-      applySenderSettings(settings);
-      message('Preparing the QR stream from packet 0…');
-      lastMeta = await prepareFreshSequence();
-      const automatic = estimateSeconds(lastMeta, settings);
-      targetSeconds = durationInput.value === 'auto' ? automatic : Number(durationInput.value);
-      if (durationInput.value === 'auto' && targetSeconds > MAX_AUTO_SECONDS) {
-        throw new Error('Auto video would exceed 15 minutes. Use a faster preset or a smaller input file.');
-      }
-      if (!targetSeconds || !Number.isFinite(targetSeconds)) throw new Error('Invalid recording duration.');
-      const fileName = String(lastMeta.name || 'transfer').replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 64);
-      fileLabel = fileName || 'transfer';
-      updateEstimatedSize();
-      recorderChunks = [];
-      paintedFrames = 0;
-      // requestFrame() captures each native QR update when supported; fallback captures changed frames at FPS.
-      stream = videoCanvas.captureStream(0);
-      track = stream.getVideoTracks()[0];
-      if (!track) throw new Error('Canvas capture track unavailable.');
-      if (typeof track.requestFrame !== 'function') {
-        stopStream();
-        stream = videoCanvas.captureStream(settings.fps);
-        track = stream.getVideoTracks()[0];
-      }
-      const options = { videoBitsPerSecond: settings.bitrate };
-      if (mime) options.mimeType = mime;
-      recorder = new MediaRecorder(stream, options);
-      recorder.ondataavailable = event => { if (event.data?.size) recorderChunks.push(event.data); };
-      recorder.onerror = event => {
-        message('Video recording failed: ' + (event.error?.message || 'encoder error'));
-        setState('Error');
-        recording = false;
-        stopStream();
-        clearInterval(elapsedTimer);
-        recordButton.disabled = false;
-        stopButton.disabled = true;
+      if(play && /^pause$/i.test(play.textContent.trim()))play.click();
+      meta=null;lastFrame=null;
+      const desired=selectedSettings();
+      applySender(desired);
+      setText('Packing your file and preparing QR codes…');
+      meta=await prepareSequence(signal);
+      if(signal.aborted)throw new DOMException('Export cancelled','AbortError');
+      prepare.disabled=true;
+      const estimateInfo=updateEstimate();
+      const p=selectedSettings();
+      const seconds=estimateInfo.seconds;
+      if(!seconds||!Number.isFinite(seconds)||seconds>900)throw Error('Invalid video duration. Limit: 15 minutes.');
+      const coverage=p.mode==='quad'?(p.fps>60?2:4):1;
+      const minSeconds=Math.ceil(meta.k/(p.fps*coverage))+1;
+      if(seconds<minSeconds)throw Error('Video duration is too short to include the whole file. Choose Auto or a longer duration.');
+      const frames=Math.ceil(seconds*p.fps);
+      if(frames>MAX_FRAMES)throw Error('This export requires too many frames. Reduce FPS or video duration.');
+      const generator=window.QRTurboOfflineFrames(frames,{signal});
+      const first=await generator.next();
+      if(first.done)throw Error('No QR frames produced');
+      paint(first.value.patterns,p);
+      const config=await encoderConfig(canvas.width,canvas.height,p);
+      const {WebMWriter}=await import(new URL('../webm-writer.js',location.href).href);
+      const muxer=new WebMWriter({width:canvas.width,height:canvas.height,fps:p.fps,codec:config.webmCodec,duration:frames/p.fps});
+      let encodeError=null;
+      encoder=new VideoEncoder({
+        output:chunk=>{try{muxer.add(chunk);}catch(error){encodeError=error;}},
+        error:error=>{encodeError=error;}
+      });
+      const {webmCodec,...actualConfig}=config;
+      encoder.configure(actualConfig);
+      setState('Encoding');
+      generationStart=performance.now();
+      let done=0;
+      const pushFrame=async item=>{
+        if(signal.aborted)throw new DOMException('Export cancelled','AbortError');
+        if(encodeError)throw encodeError;
+        if(done>0)paint(item.patterns,p);
+        const timestamp=Math.round(done*1_000_000/p.fps);
+        const frame=new VideoFrame(canvas,{timestamp,duration:Math.round(1_000_000/p.fps)});
+        try{encoder.encode(frame,{keyFrame:done%(p.fps*5)===0});}finally{frame.close();}
+        done++;
+        if(encoder.encodeQueueSize>20)await encoder.flush();
+        if(done%7===0||done===frames){
+          progress.value=done/frames*100;
+          const elapsed=Math.max(.001,(performance.now()-generationStart)/1000);
+          setText('Encoding QR frames locally: '+done.toLocaleString('en-US')+' / '+frames.toLocaleString('en-US')+
+            ' ('+Math.round(done/frames*100)+'%) · '+Math.round(done/elapsed)+' frames/sec');
+          if(done%28===0)await yieldUI();
+        }
       };
-      recorder.onstop = () => {
-        clearInterval(elapsedTimer);
-        stopStream();
-        recordButton.disabled = false;
-        stopButton.disabled = true;
-        if (!recorderChunks.length) { message('No video data was produced. Try another browser.'); setState('No data'); return; }
-        const blob = new Blob(recorderChunks, { type: recorder.mimeType || mime || 'video/webm' });
-        const ext = blob.type.includes('mp4') ? 'mp4' : 'webm';
-        finalUrl = URL.createObjectURL(blob);
-        download.href = finalUrl;
-        download.download = `qr-turbo-${fileLabel}.${ext}`;
-        download.textContent = `Download QR video · ${formatBytes(blob.size)}`;
-        download.hidden = false;
-        setState('Ready');
-        message(`Video ready: ${formatBytes(blob.size)} · ${paintedFrames} QR updates · ${videoCanvas.width}×${videoCanvas.height} · ${Math.round(recorder.videoBitsPerSecond / 1000)} kbps configured. Test it in Import Video.`);
-      };
-      recorder.start(1000);
-      recording = true;
-      preparing = false;
-      startedAt = performance.now();
-      stopButton.disabled = false;
-      setState('Recording');
-      progress.value = 0;
-      paintQrFrame(latestPatterns); // capture the first systematic QR codes before playback advances
-      try { track.requestFrame?.(); } catch (_) {}
-      playButton.click();
-      elapsedTimer = setInterval(() => {
-        const elapsed = (performance.now() - startedAt) / 1000;
-        progress.value = Math.min(100, elapsed / targetSeconds * 100);
-        message(`Recording QR sequence: ${elapsed.toFixed(1)} / ${targetSeconds} s · ${paintedFrames} QR updates · requested ${settings.kbps} kbps`);
-        if (elapsed >= targetSeconds) stopRecording();
-      }, 200);
-    } catch (error) {
-      preparing = false;
-      recording = false;
-      stopStream();
-      stopButton.disabled = true;
-      recordButton.disabled = false;
-      setState('Error');
-      message('Could not record QR video: ' + error.message);
+      await pushFrame(first.value);
+      for await(const item of generator)await pushFrame(item);
+      if(signal.aborted)throw new DOMException('Export cancelled','AbortError');
+      setState('Finalizing');
+      setText('Finalizing WebM container and seek points…');
+      await encoder.flush();
+      if(encodeError)throw encodeError;
+      encoder.close();encoder=null;
+      const blob=muxer.finish();
+      linkUrl=URL.createObjectURL(blob);
+      link.href=linkUrl;
+      link.download='qr-turbo-'+safeName(meta.name)+'.webm';
+      link.textContent='Download QR video · '+BYTES(blob.size);
+      link.hidden=false;
+      progress.value=100;
+      setState('Ready to download');
+      const wall=((performance.now()-generationStart)/1000).toFixed(1);
+      setText('Video ready · '+BYTES(blob.size)+' · '+frames.toLocaleString('en-US')+' frames generated in '+wall+
+        ' seconds. Test the file with Import Video before sharing.');
+    }catch(error){
+      if(error?.name==='AbortError'){setState('Cancelled');setText('Video generation cancelled.');}
+      else {setState('Error');setText('Could not create video: '+(error?.message||String(error)));}
+    }finally{
+      try{encoder?.close();}catch{}
+      prepare.disabled=originallyDisabled;
+      active=false;record.disabled=false;cancel.disabled=true;controller=null;
     }
   }
-  recordButton.addEventListener('click', () => void recordVideo());
-  stopButton?.addEventListener('click', stopRecording);
-  window.addEventListener('pagehide', () => {
-    clearInterval(elapsedTimer);
-    if (recorder?.state === 'recording') recorder.stop();
-    stopStream();
-    if (finalUrl) URL.revokeObjectURL(finalUrl);
-  });
+  record.addEventListener('click',()=>{void createVideo();});
+  cancel?.addEventListener('click',()=>controller?.abort());
+  window.addEventListener('pagehide',()=>{controller?.abort();if(linkUrl)URL.revokeObjectURL(linkUrl);});
 })();
