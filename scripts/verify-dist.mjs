@@ -120,7 +120,6 @@ console.log('Camera Studio wired into live scanner and permission-aware controls
 
 if(!cameraPage.includes('id="cameraQualityHint"')||!cameraPage.includes('id="cameraAutoExposure"'))throw new Error('Camera quality feedback UI is missing');
 if(!cameraApp.includes('QRTurboCamera.request({'))throw new Error('Missing fallback camera acquisition');
-
 for(const asset of ['camera-viewer.js','camera-viewer.css']){
   if(!existsSync(join(dir,asset)))throw Error('Missing fullscreen asset: '+asset);
 }
@@ -134,3 +133,8 @@ for(const layout of ['value="1"','value="4"','value="8"','value="16"']){
 if(!cameraApp.includes('qr-turbo:scan-hit')||!cameraApp.includes('preferHighFps'))
   throw Error('Decoded QR overlays or camera FPS gating are missing');
 console.log('Camera fullscreen, QR layouts and decoder overlay integration validated.');
+if(cameraApp.includes('void postHighSpeedRegion(slot,region,1,false,true).then')||
+   !cameraApp.includes('if(dispatched&&typeof dispatched.then==="function")')||
+   !cameraApp.includes('if(codes.length)highScanMisses=0;')){
+  throw new Error('Turbo Grid scanner must handle synchronous bitmap dispatch and worker decode results');
+}
