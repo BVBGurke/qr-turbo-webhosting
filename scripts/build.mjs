@@ -149,6 +149,17 @@ try {
   addTurboGrid(output);
   addTurboGridReceivers(output);
   improveOilUI(output);
+  // Transfer previews share one implementation across sender, receivers and video import.
+  for (const route of ['send','receive','screen','import']) {
+    const page = join(output, route, 'index.html');
+    let html = readFileSync(page, 'utf8');
+    if (!html.includes('</head>') || !html.includes('</body>')) {
+      throw new Error('Missing HTML asset insertion point for '+route);
+    }
+    html = html.replace('</head>', '<link rel="stylesheet" href="../transfer-preview.css"></head>');
+    html = html.replace('</body>', '<script defer src="../transfer-preview.js"></script></body>');
+    writeFileSync(page, html);
+  }
   for (const path of ['receive', 'screen']) {
     const manifestFile = join(output, path, 'manifest.webmanifest');
     if (existsSync(manifestFile)) {

@@ -268,6 +268,7 @@
     if(linkUrl){URL.revokeObjectURL(linkUrl);linkUrl=null;}
     setState('Preparing');
     progress.value=0;
+    window.dispatchEvent(new CustomEvent('qr-turbo:video-start'));
     let encoder=null;
     const originallyDisabled=prepare.disabled;
     try {
@@ -345,6 +346,10 @@
       link.textContent='Download QR video · '+BYTES(blob.size);
       link.hidden=false;
       progress.value=100;
+      window.dispatchEvent(new CustomEvent('qr-turbo:video-ready', {
+        detail:{url:linkUrl,name:link.download,size:blob.size,tiles:codeCount,
+          fps:p.fps,duration:frames/p.fps}
+      }));
       // Keep the explicit link if the browser blocks a programmatic download.
       try{link.click();}catch{}
       setState('Ready to download');
@@ -352,6 +357,9 @@
       setText('Video ready · '+BYTES(blob.size)+' · '+frames.toLocaleString('en-US')+' frames generated in '+wall+
         ' seconds. Test the file with Import Video before sharing.');
     }catch(error){
+      window.dispatchEvent(new CustomEvent('qr-turbo:video-error', {
+        detail:{message:error?.message||String(error)}
+      }));
       if(error?.name==='AbortError'){setState('Cancelled');setText('Video generation cancelled.');}
       else {setState('Error');setText('Could not create video: '+(error?.message||String(error)));}
     }finally{

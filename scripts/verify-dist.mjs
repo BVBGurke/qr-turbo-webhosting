@@ -34,11 +34,30 @@ if(!sender.includes('id="oilFast120"'))throw new Error('High FPS select missing'
 for(const path of ['oil-design.css','oil-design.js'])if(!existsSync(join(dir,path)))throw new Error('Missing design asset '+path);
 console.log('Oil UI cross-route design verification passed.');
 
+for (const route of ['send','receive','screen','import']) {
+  const html = readFileSync(join(dir,route,'index.html'),'utf8');
+  if(!html.includes('transfer-preview.js') || !html.includes('transfer-preview.css')) {
+    throw new Error('Missing download/source preview module in '+route);
+  }
+}
+for (const asset of ['transfer-preview.js','transfer-preview.css']) {
+  if(!existsSync(join(dir,asset)))throw new Error('Missing transfer preview asset '+asset);
+}
+const previewSource=readFileSync(join(dir,'transfer-preview.js'),'utf8');
+if(!previewSource.includes('qr-turbo:video-ready') ||
+   !previewSource.includes('transferReceivedPreview') ||
+   !previewSource.includes('videoImportFile') ||
+   !previewSource.includes('fileInput')) {
+  throw new Error('Missing video, selected-file, or receiver preview wiring');
+}
+console.log('Source, video and recovered-file previews verified across routes.');
+
 if(!sender.includes('QRTurboOfflineFrames')) throw new Error('Offline frame API missing');
 if(!sender.includes('exportCustomSettings')||!sender.includes('exportFPS')||!sender.includes('exportLayout')) throw new Error('Custom video controls missing');
 if(!sender.includes('120 FPS')) throw new Error('120 FPS video choice missing');
 const offline=readFileSync(join(dir,'video-export.js'),'utf8');
 if(!offline.includes('VideoEncoder')||!offline.includes('WebMWriter')||offline.includes('new MediaRecorder'))throw new Error('Offline WebCodecs encoder not configured');
+if(!offline.includes("qr-turbo:video-ready")||!offline.includes("qr-turbo:video-start"))throw new Error('Video export preview lifecycle events missing');
 if(!existsSync(join(dir,'webm-writer.js')))throw new Error('Missing WebM writer');
 console.log('Offline video generation and custom 4 QR 120 FPS verified.');
 

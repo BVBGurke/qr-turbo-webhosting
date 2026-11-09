@@ -115,3 +115,7 @@ New experimental high-density layouts: **8 QR codes (4×2)** and **16 QR codes (
 V2 packets include a 32-bit block count (instead of V1's 16-bit field) and the QR tile index, enabling high-density grid tracking. V1 remains backward compatible. High-FPS profiles update four tiles at a time; values such as 16×120 FPS are target settings, not proven camera throughput. The actual results depend heavily on optical resolution and hardware.
 
 See [TURBO-V2.md](TURBO-V2.md) for frame layout, compatibility, limitations, and testing.
+
+## Previews and downloads
+
+The sender previews selected files locally (thumbnail for images and playable previews for video/audio). Video export includes a top-down expanding panel with a player for the finished WebM; this appears even when headless rendering is selected, without slowing down the encoding loop. Camera, screen, and video receivers also preview supported downloaded image/video/audio files once recovery has completed. Text files can be inspected locally in the sender. No file is uploaded for previews. Animations follow `prefers-reduced-motion`.
