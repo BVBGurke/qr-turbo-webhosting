@@ -9,7 +9,7 @@ function mustReplace(content, needle, replacement, file) {
 function insertVideoReceiverHooks(source) {
   source = mustReplace(source,
     '  async function start() {',
-    String.raw\`  async function startLocalVideoImport() {
+    String.raw`  async function startLocalVideoImport() {
     const selected = document.getElementById("videoImportFile")?.files?.[0];
     if (!selected) throw new Error("Choose a video first.");
     if (selected.size > 1024 * 1024 * 1024) throw new Error("Videos over 1 GB are not supported.");
@@ -39,7 +39,7 @@ function insertVideoReceiverHooks(source) {
     window.QRTurboVideoStarted?.({duration: video.duration, width: video.videoWidth, height: video.videoHeight});
   }
 
-  async function start() {\`,
+  async function start() {`,
     'import/app.js');
   source = mustReplace(source,
     '      await setupDetector();',
@@ -47,17 +47,17 @@ function insertVideoReceiverHooks(source) {
     'import/app.js');
   source = mustReplace(source,
     '    if (stream) stream.getTracks().forEach((track) => track.stop());',
-    String.raw\`    if (stream) stream.getTracks().forEach((track) => track.stop());
+    String.raw`    if (stream) stream.getTracks().forEach((track) => track.stop());
     if (window.QRTurboVideoImport) {
       video.pause();
       video.removeAttribute("src");
       video.load();
       if (window.QRTurboVideoURL) { URL.revokeObjectURL(window.QRTurboVideoURL); window.QRTurboVideoURL = null; }
-    }\`,
+    }`,
     'import/app.js');
   source = mustReplace(source,
     '        recordHighSequence(parsed.header);',
-    String.raw\`        recordHighSequence(parsed.header);
+    String.raw`        recordHighSequence(parsed.header);
         if (window.QRTurboVideoImport) {
           const b = parsed.block;
           window.QRTurboOnFrame?.({
@@ -67,7 +67,7 @@ function insertVideoReceiverHooks(source) {
             unique: highDecoder?.framesNew ?? 0,
             sample: Array.from(b.subarray(0, 8), n => n.toString(16).padStart(2, "0")).join(" ")
           });
-        }\`,
+        }`,
     'import/app.js');
   source = mustReplace(source,
     '      result.hidden = false;\n      progressText.textContent = "100%',
@@ -87,7 +87,7 @@ export function addVideoRoutes(output) {
   let exp = readFileSync(exportPath, 'utf8');
   exp = mustReplace(exp, '<body>', '<body class="video-export-page">', exportPath);
   exp = mustReplace(exp, '</head>', '<link rel="stylesheet" href="../video.css"></head>', exportPath);
-  exp = mustReplace(exp, '<div class="actions">', String.raw\`<section class="video-tool-panel" aria-label="Export QR video">
+  exp = mustReplace(exp, '<div class="actions">', String.raw`<section class="video-tool-panel" aria-label="Export QR video">
     <h2>Export an animated QR video</h2>
     <p>Choose a file above and prepare the QR stream. Then record it as a shareable video. It contains QR codes, not the original visible video.</p>
     <div class="video-field-grid">
@@ -107,7 +107,7 @@ export function addVideoRoutes(output) {
     <output id="exportStatus" role="status">Select a file, then click Prepare QR stream.</output>
     <a id="exportDownload" class="video-download" hidden download>Download QR video</a>
   </section>
-  <div class="actions">\`, exportPath);
+  <div class="actions">`, exportPath);
   exp = mustReplace(exp, '</body>', '<script src="../video-export.js" defer></script></body>', exportPath);
   writeFileSync(exportPath, exp);
 
@@ -115,7 +115,7 @@ export function addVideoRoutes(output) {
   let imp = readFileSync(importPath, 'utf8');
   imp = mustReplace(imp, '<body>', '<body class="video-import-page">', importPath);
   imp = mustReplace(imp, '</head>', '<link rel="stylesheet" href="../video.css"></head>', importPath);
-  imp = mustReplace(imp, '</header>', String.raw\`</header>
+  imp = mustReplace(imp, '</header>', String.raw`</header>
   <section class="video-tool-panel" aria-label="Import recorded QR video">
     <h2>Import and decode a QR video</h2>
     <p>Open an animated QR recording made by QR Turbo. Everything is decoded locally, with visual progress and detailed incoming-data logs.</p>
@@ -143,7 +143,7 @@ export function addVideoRoutes(output) {
       <div class="video-log-toolbar"><span>Local packet metadata + first 8 payload bytes (hex)</span><button type="button" id="downloadLog">Download log</button></div>
       <pre id="videoDataLog" role="log" aria-live="off">Select a video to begin.</pre>
     </details>
-  </section>\`, importPath);
+  </section>`, importPath);
   imp = mustReplace(imp, '<script src="vendor/jsQR.js"></script>', '<script>window.QRTurboVideoImport = true;</script><script src="vendor/jsQR.js"></script>', importPath);
   imp = mustReplace(imp, '</body>', '<script src="../video-import.js" defer></script></body>', importPath);
   writeFileSync(importPath, imp);

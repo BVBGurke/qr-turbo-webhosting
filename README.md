@@ -64,3 +64,24 @@ The hosted site serves the static application files; transferred file contents a
 - UI translation mapping: `scripts/translations.json`
 
 To test a newer upstream version: `UPSTREAM_REF=main npm run build`. The build deliberately rejects missing critical patches.
+
+## QR video export / import
+
+Two independent routes are built along with the main sender/receiver:
+
+- **`/export/`** — Select and prepare a file, then use **Record video** to capture the animated QR-code canvas to a shareable WebM (or MP4 if the browser's MediaRecorder supports it). **Show QR playback** toggles the visible preview without stopping canvas recording. Select 30/60/120/240 seconds and adjust speed/quality presets. This is experimental: use high video bitrate and test a short file first.
+- **`/import/`** — Choose a previously recorded QR video. The original BeamFerry decoder runs over each video frame offline, including its WASM workers and recovery logic. The page displays the video (optionally hidden), file reconstruction progress, unique packet count, recovered blocks, timeline graph and a downloadable local log with packet sequence numbers, byte counts and the first 8 payload bytes in hexadecimal. This information is never transmitted to the server.
+
+Recommended export preset: **1465 bytes per code at 24 FPS**. For more robust recordings choose **1273 bytes at 20 FPS**; for higher throughput, try the experimental **2068 bytes at 30 FPS** profile. These are settings, not measured benchmarks.
+
+Video import depends on the browser being able to decode the selected file format. Export depends on `canvas.captureStream` and `MediaRecorder` support. Neither WebM nor MP4 can be promised across every device/browser. Transcoding by messengers may blur QR modules and damage transferred data. No end-to-end roundtrip was verified in a real browser.
+
+### Running checks
+
+```sh
+npm run test
+npm run build
+npm run test:dist
+```
+
+The CI **Verify build** workflow checks the project independently of GitHub Pages deployment settings.

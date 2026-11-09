@@ -9,6 +9,7 @@ import { execFileSync } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
+import { addVideoRoutes } from './video-routes.mjs';
 
 const project = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const output = join(project, 'dist');
@@ -56,6 +57,8 @@ function addCommonUI(path, mode) {
     <a href="${base}send/" class="${mode==='send'?'active':''}">Send</a>
     <a href="${base}receive/" class="${mode==='receive'?'active':''}">Camera</a>
     <a href="${base}screen/" class="${mode==='screen'?'active':''}">Screen</a>
+    <a href="${base}export/" class="">Export Video</a>
+    <a href="${base}import/" class="">Import Video</a>
   </div>
   <a class="turbo-home" href="${base}">Home ↗</a>
   </nav>`;
@@ -118,6 +121,7 @@ try {
     translateUI(join(output, file));
   }
   for (const [mode, path] of [['send','send/index.html'], ['receive','receive/index.html'], ['screen','screen/index.html']]) addCommonUI(join(output, path), mode);
+  addVideoRoutes(output);
   for (const path of ['receive', 'screen']) {
     const manifestFile = join(output, path, 'manifest.webmanifest');
     if (existsSync(manifestFile)) {
@@ -144,7 +148,7 @@ try {
     createdAt: new Date().toISOString(),
     note: 'The original BeamFerry QR protocol and WASM decoder are used unchanged.',
   }, null, 2));
-  for (const rel of ['index.html', 'send/index.html', 'receive/index.html', 'screen/index.html', 'receive/vendor/decimen/zxing_reader-EOacYbLr.wasm']) {
+  for (const rel of ['index.html', 'send/index.html', 'receive/index.html', 'screen/index.html', 'receive/vendor/decimen/zxing_reader-EOacYbLr.wasm', 'export/index.html', 'import/index.html', 'video-export.js', 'video-import.js']) {
     requireFile(join(output, rel));
   }
   const sender = readFileSync(join(output, 'send', 'index.html'), 'utf8');

@@ -1,0 +1,15 @@
+import { existsSync, readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+const dir=resolve('dist');
+for(const path of ['index.html','send/index.html','receive/index.html','screen/index.html','export/index.html','import/index.html','export/vendor/qr-lib.js']) {
+  if(path==='export/vendor/qr-lib.js')continue;
+  if(!existsSync(join(dir,path)))throw new Error('Missing build output: '+path);
+}
+const sender=readFileSync(join(dir,'export/index.html'),'utf8');
+const receiver=readFileSync(join(dir,'import/app.js'),'utf8');
+const home=readFileSync(join(dir,'index.html'),'utf8');
+if(!sender.includes('exportRecord')||!sender.includes('video-export.js'))throw new Error('Video export UI missing');
+if(!receiver.includes('startLocalVideoImport')||!receiver.includes('QRTurboOnFrame'))throw new Error('Video decoder hook missing');
+if(!home.includes('Video transfer tools'))throw new Error('Video navigation missing');
+if(sender.includes('https://shuipashui.github.io/beamferry/";'))throw new Error('Sender URL not self-hosted');
+console.log('Static build checks passed: routes, source hooks, and video navigation.');

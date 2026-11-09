@@ -19,7 +19,7 @@
         <span class="logo" aria-hidden="true"><svg viewBox="0 0 40 40" fill="none"><rect x="5" y="5" width="12" height="12" rx="2" fill="currentColor"/><rect x="23" y="5" width="12" height="12" rx="2" fill="currentColor"/><rect x="5" y="23" width="12" height="12" rx="2" fill="currentColor"/><rect x="24" y="24" width="4" height="4" fill="currentColor"/><rect x="31" y="24" width="4" height="4" fill="currentColor"/><rect x="24" y="31" width="4" height="4" fill="currentColor"/><rect x="31" y="31" width="4" height="4" fill="currentColor"/></svg></span>
         <span>QR <strong>Turbo</strong></span>
       </a>
-      <div class="nav-actions"><nav class="home-links" aria-label="Main navigation"><a href="send/">Send</a><a href="receive/">Camera</a><a href="screen/">Screen</a></nav><span class="offline-pill"><span class="live-dot"></span> Local & private</span><a class="github" href="https://github.com/shuipashui/beamferry" target="_blank" rel="noopener noreferrer">Open-source engine <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 17 17 7M8 7h9v9"/></svg></a></div>
+      <div class="nav-actions"><nav class="home-links" aria-label="Main navigation"><a href="send/">Send</a><a href="receive/">Camera</a><a href="screen/">Screen</a><a href="export/">Export Video</a><a href="import/">Import Video</a></nav><span class="offline-pill"><span class="live-dot"></span> Local & private</span><a class="github" href="https://github.com/shuipashui/beamferry" target="_blank" rel="noopener noreferrer">Open-source engine <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 17 17 7M8 7h9v9"/></svg></a></div>
     </header>
 
     <main>
@@ -60,6 +60,24 @@
         </div>
       </section>
 
+      
+      <section class="tools video-tools" aria-labelledby="video-tools-heading">
+        <div class="section-heading"><div><p class="overline">SHARE AN OFFLINE QR VIDEO</p><h2 id="video-tools-heading">Video transfer tools.</h2></div></div>
+        <div class="tool-grid video-tool-grid">
+          <a class="tool-card" href="export/">
+            <span class="card-icon" aria-hidden="true">▣</span>
+            <strong>Export Video</strong>
+            <span class="card-description">Record animated QR codes to WebM or MP4 when supported. Share the video without sharing the original file online.</span>
+            <span class="card-foot">Preview on or off <span>↗</span></span>
+          </a>
+          <a class="tool-card" href="import/">
+            <span class="card-icon" aria-hidden="true">▶</span>
+            <strong>Import Video</strong>
+            <span class="card-description">Decode a QR video locally, inspect recovered data blocks and scan progress, and download the reconstructed file.</span>
+            <span class="card-foot">Video preview + live data log <span>↗</span></span>
+          </a>
+        </div>
+      </section>
       <section class="workflow" aria-labelledby="how-heading">
         <div class="section-heading"><div><p class="overline">HOW IT WORKS</p><h2 id="how-heading">Three simple steps.</h2></div></div>
         <div class="steps"><div class="step"><span class="step-num">01</span><strong>Choose a file</strong><p>Auf dem PC den Send a file öffnen und eine Datei auswählen.</p></div><div class="step"><span class="step-num">02</span><strong>Start playback</strong><p>Play four QR codes at 30 FPS, ideally in fullscreen.</p></div><div class="step"><span class="step-num">03</span><strong>Scan with your camera</strong><p>Auf dem Handy den Camera receiver starten, alle vier Codes ins Bild nehmen und die Datei speichern.</p></div></div>
