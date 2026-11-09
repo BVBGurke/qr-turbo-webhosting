@@ -42,7 +42,7 @@ Im V2-Modus 8/16 QR bei 90 oder 120 Ziel-FPS werden ab dem zweiten Simulationssc
 
 ## Bekannte Einschränkungen
 
-Die drei Originalscanner-Quellen sind bedienbar, ihre Hardware-/QR-Laufzeitmetriken werden aber noch nicht automatisch in die Benchmark-Tabelle importiert. Optische Live-Benchmarks mit echter Kamera, echte QR-Bilddecodierung, CPU-Prozentwerte, GPU-Prozentwerte und Temperaturdaten sind bewusst nicht simuliert. Für einen realen Hardware-Vergleich muss ein echtes Gerät mit der Originalscanner-Seite und erfolgreicher Dateiübertragung getestet werden.
+Die drei Originalscanner-Quellen sind bedienbar, ihre Messungen echter Kamera-/Bildschirm-/Videoempfänger werden nach aktivierter Überwachung und erfolgreichem Download in die Tabelle übernommen. Ein solcher Lauf verwendet den gemessenen Empfangsdurchsatz inklusive Anlaufzeit, nicht den Codec-MiB/s-Wert. Das Originalscanner-UI prüft bei V2 SHA-256 und bei V1 CRC-32. Der zusätzliche lokale SHA-256-Fingerabdruck ist ohne Senderreferenz keine eigenständige Gleichheitsprüfung. Live-QR-FPS sowie Geräte-CPU-/GPU-/Thermikwerte bleiben nicht verfügbar. Optische Live-Benchmarks mit echter Kamera, echte QR-Bilddecodierung, CPU-Prozentwerte, GPU-Prozentwerte und Temperaturdaten sind bewusst nicht simuliert. Für einen realen Hardware-Vergleich muss ein echtes Gerät mit der Originalscanner-Seite und erfolgreicher Dateiübertragung getestet werden.
 
 Die automatische Testdatei bleibt lokal im Browser; es ist kein Backend nötig.
 

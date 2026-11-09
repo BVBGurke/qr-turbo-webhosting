@@ -1,6 +1,7 @@
 import {PRESETS,DEFAULT_CONFIG,applyPreset,validateConfig,createMatrix,runCodecBenchmark,
  deterministicBytes,compareRuns,makeEnvironment,makeId} from './benchmark-core.mjs';
 import {createStore,exportRuns} from './benchmark-store.mjs';
+import {createReceiverMonitor} from './benchmark-source-monitor.mjs';
 const $=id=>document.getElementById(id);
 const all=(css,root=document)=>[...root.querySelectorAll(css)];
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -11,7 +12,8 @@ const H=globalThis.AirFerryHighSpeed;
 const preferencesKey='qrt-benchmark-preferences-v1';
 let store=null,source='synthetic',preset='balanced',version='unbekannt',busy=false,paused=false,
  abortController=null,activeQueue=[],completed=0,selectedFilter='all',selectedIds=new Set(),
- history=[],samples=[],stream=null,streamFrames=0,streamSince=0,wasCancelled=false;
+ history=[],samples=[],stream=null,streamFrames=0,streamSince=0,wasCancelled=false,
+ receiverMonitor=null;
 const currentConfig=()=>({
  ...DEFAULT_CONFIG,source,preset,grid:Number($('grid').value),fps:Number($('fps').value),
  resolution:$('resolution').value,bytesPerQR:Number($('bytesPerQR').value),
@@ -70,6 +72,7 @@ const sourceMessage={
 };
 function setSource(value){
  if(busy)return;
+ receiverMonitor?.detach();
  source=value;
  all('[data-source]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.source===value)));
  $('sourceExplanation').textContent=sourceMessage[value];
@@ -87,7 +90,7 @@ function setSource(value){
  $('previewHelp').querySelector('p').textContent=value==='synthetic'
   ?'Die Vorschau verwendet den originalen Sender. Der Codec-Test misst die Paketverarbeitung unabhängig vom sichtbaren QR-Bild.'
   :'Die originale QR-Turbo-Funktion bleibt in dieser Vorschau bedienbar. Ihre Hardwarewerte werden nicht als synthetischer Benchmark ausgegeben.';
- $('startBenchmark').textContent=value==='synthetic'?'Benchmark starten ↗':'Originalscanner verwenden ↗';
+ $('startBenchmark').textContent=value==='synthetic'?'Benchmark starten ↗':value==='stream'?'Streamvorschau öffnen ↗':'Empfang messen ↗';
  controls();savePreferences();
 }
 function matrixOptions(){
@@ -148,14 +151,18 @@ function progressLive(p,c){
 }
 function finishView(result){
  const m=result.metrics||{};
- $('metricSpeed').textContent=number(m.codecMiBs);
+ $('metricSpeed').textContent=number(m.goodputMiBs??m.codecMiBs);
+ $('metricSpeedLabel').textContent=m.goodputMiBs!==null&&m.goodputMiBs!==undefined?'Empfangsdurchsatz':'Codec-Durchsatz';
  $('metricSymbols').textContent=String(m.packets??'—');
  $('metricLatency').textContent=number(m.p95DecodeMs);
  $('metricRecovery').textContent=String(m.recoveredBlocks??0)+' / '+String(m.requiredBlocks??'—');
  $('runProgress').value=Math.round(100*(m.recoveredBlocks??0)/Math.max(1,m.requiredBlocks||1));
  $('runProgressPercent').textContent=Math.round($('runProgress').value)+' %';
- $('metricCaveat').textContent='Dateiintegrität: '+(m.sha256Verified?'SHA-256 / Bytevergleich bestanden':'nicht vollständig')+
-  ' · Optischer Goodput, QR-Kamerafrequenz, CPU-/GPU-Auslastung: Nicht verfügbar.';
+ $('metricCaveat').textContent=result.executionType==='synthetischer Codec-End-to-End-Test'?
+  'Dateiintegrität: '+(m.sha256Verified?'SHA-256 / Bytevergleich bestanden':'nicht vollständig')+
+  ' · Optischer Goodput, QR-Kamerafrequenz, CPU-/GPU-Auslastung: Nicht verfügbar.':
+  'Originalempfänger: '+(m.sha256Verified?'SHA-256 bestätigt':m.crc32Verified?'CRC-32 bestätigt':'Prüfsumme im UI nicht ausgewiesen')+
+  ' · Tatsächlicher Empfangsgoodput einschließlich Anlaufzeit, kein Sender-Bytevergleich.';
  showState(result.status==='erfolgreich'?'BESTANDEN':'FEHLGESCHLAGEN',result.status==='erfolgreich'?'ready':'failed');
 }
 function updateComparison(){
@@ -184,7 +191,7 @@ function renderHistory(){
    '<td><b>'+esc(r.createdAt.replace('T',' ').slice(0,19))+'</b><br><small>'+esc(r.id.slice(0,12))+
    (r.attempt>0?' · Wiederholung '+r.attempt:'')+'</small></td>'+
    '<td>'+esc(c.grid??'—')+' / '+esc(c.fps??'—')+'</td>'+
-   '<td>'+number(m.codecMiBs,3)+'</td><td>'+number(m.p95DecodeMs)+'</td>'+
+   '<td>'+number(m.goodputMiBs??m.codecMiBs,3)+'</td><td>'+number(m.p95DecodeMs)+'</td>'+
    '<td>'+esc(m.duplicates??'—')+'</td><td>'+ratio(m.fecOverhead)+'</td>'+
    '<td><span class="status-text" data-ok="'+(r.status==='erfolgreich')+'">'+esc(r.status)+'</span></td></tr>';
  }).join('')||'<tr><td colspan="8">Keine Ergebnisse in dieser Kategorie.</td></tr>';
@@ -335,7 +342,11 @@ function bindEvents(){
  all('#konfiguration input,#konfiguration select').forEach(el=>el.addEventListener('change',updatePreset));
  all('#matrix input').forEach(el=>el.addEventListener('change',makeMatrix));
  $('buildMatrix').addEventListener('click',makeMatrix);
- $('startBenchmark').addEventListener('click',()=>source==='synthetic'?void execute([currentConfig()]):$('toolFrame').focus());
+ $('startBenchmark').addEventListener('click',()=>{
+  if(source==='synthetic')return void execute([currentConfig()]);
+  if(source==='stream')return void startStream();
+  receiverMonitor?.arm();$('toolFrame').focus();
+ });
  $('runMatrix').addEventListener('click',()=>{
   const matrix=makeMatrix();if(matrix)void execute(matrix);
  });
@@ -394,6 +405,14 @@ async function main(){
  }catch{}
  updatePreset();setSource('synthetic');makeMatrix();
  store=await createStore();history=store.rows;renderHistory();
+ receiverMonitor=createReceiverMonitor({
+  getSource:()=>source,getConfig:currentConfig,getVersion:()=>version,getEnvironment:()=>env,
+  onNotice:text=>showMessage(text),
+  onProgress:text=>{if(!busy)$('runProgressLabel').textContent='Echter Scanner: '+text;},
+  onResult:async row=>{
+   await store.save(row);history=store.rows;renderHistory();finishView(row);
+  }
+ });
  if(!H?.LTDecoder)showMessage('QR-Turbo-Codec nicht geladen; automatische Tests können nicht starten.',true);
 }
 void main();

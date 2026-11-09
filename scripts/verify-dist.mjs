@@ -136,3 +136,10 @@ for(const path of ['index.html','send/index.html','receive/index.html','screen/i
   throw new Error('Benchmark navigation missing: '+path);
 }
 console.log('Benchmark Lab: statischer Build und Navigation geprüft.');
+
+if(!existsSync(join(dir,'benchmark/benchmark-source-monitor.mjs')))
+ throw Error('Source monitor module missing');
+const labApp=readFileSync(join(dir,'benchmark/benchmark-app.mjs'),'utf8');
+if(!labApp.includes('createReceiverMonitor')||!labApp.includes('receiverMonitor?.arm()'))
+ throw Error('Original receiver monitoring is not connected');
+console.log('Original receiver monitor integrated for camera/screen/video.');

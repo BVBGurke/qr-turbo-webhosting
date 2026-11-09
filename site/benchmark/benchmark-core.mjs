@@ -115,7 +115,7 @@ export function compareRuns(current,baseline,threshold=15){
 }
 export function toCSV(rows){
   const keys=["id","createdAt","status","executionType","source","device","browser","grid","fps",
-    "bytesPerQR","resolution","engine","codecMiBs","meanDecodeMs","p95DecodeMs",
+    "bytesPerQR","resolution","engine","codecMiBs","goodputMiBs","meanDecodeMs","p95DecodeMs",
     "packets","unique","duplicates","dropped","requiredBlocks","recoveredBlocks","error"];
   const csvValue=value=>'"'+String(value??"").replaceAll('"','""')+'"';
   const data=rows.map(r=>({

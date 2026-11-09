@@ -153,7 +153,7 @@
   </div>
   <div class="progress-block"><div><strong id="runProgressLabel">Kein Test aktiv</strong><span id="runProgressPercent">0 %</span></div><progress id="runProgress" max="100" value="0"></progress></div>
   <div class="metric-cards">
-   <div><span>Codec-Durchsatz</span><strong id="metricSpeed">—</strong><small>MiB/s, gemessen</small></div>
+   <div><span id="metricSpeedLabel">Codec-Durchsatz</span><strong id="metricSpeed">—</strong><small>MiB/s, gemessen</small></div>
    <div><span>QR-Symbole</span><strong id="metricSymbols">—</strong><small>Pakete im Codec-Test</small></div>
    <div><span>Decodelatenz P95</span><strong id="metricLatency">—</strong><small>ms, Paketverarbeitung</small></div>
    <div><span>Wiederherstellung</span><strong id="metricRecovery">—</strong><small>Blöcke / benötigt</small></div>
@@ -178,7 +178,7 @@
    </div>
    <div class="button-row"><button type="button" class="btn-ghost" data-export="csv">CSV</button><button type="button" class="btn-ghost" data-export="json">JSON</button><button type="button" class="btn-ghost" data-export="html">HTML</button><button type="button" class="btn-ghost" data-export="log">Logs</button><button id="clearResults" type="button" class="btn-subtle">Verlauf löschen</button></div>
   </div>
-  <div class="table-scroller"><table><thead><tr><th>Vergleich</th><th>Ergebnis / Lauf</th><th>QR / FPS</th><th>Codec MiB/s</th><th>P95</th><th>Duplikate</th><th>FEC</th><th>Status</th></tr></thead><tbody id="resultRows"><tr><td colspan="8">Noch keine Benchmarks gespeichert.</td></tr></tbody></table></div>
+  <div class="table-scroller"><table><thead><tr><th>Vergleich</th><th>Ergebnis / Lauf</th><th>QR / FPS</th><th>Codec / Empfang MiB/s</th><th>P95</th><th>Duplikate</th><th>FEC</th><th>Status</th></tr></thead><tbody id="resultRows"><tr><td colspan="8">Noch keine Benchmarks gespeichert.</td></tr></tbody></table></div>
   <div class="compare-panel"><h3>Vergleich ausgewählter Läufe</h3><div id="comparisonResult" class="note">Markiere zwei vergleichbare Ergebnisse. Unterschiede bei Quelle, Konfiguration oder Browser werden angezeigt.</div><canvas id="comparisonChart" width="760" height="180" role="img" aria-label="Vergleich zweier Benchmark-Läufe"></canvas></div>
  </section>
  <section id="messmethoden" class="panel methods-panel">
