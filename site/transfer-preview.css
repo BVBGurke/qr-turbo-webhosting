@@ -1,0 +1,31 @@
+/* Transfer previews: reveal unfolds from top to bottom, with accessible no-motion fallback. */
+.transfer-preview{position:relative;overflow:hidden;isolation:isolate;margin:14px 0 18px;padding:17px 18px;border:1px solid #486852;border-radius:14px;background:linear-gradient(145deg,#1b3025,#102320);color:#e9f6e9;font:14px/1.55 Inter,system-ui,sans-serif;max-width:100%;box-shadow:0 12px 24px rgba(0,0,0,.1)}
+.transfer-preview__header{display:flex;flex-direction:column;align-items:flex-start;gap:5px;margin:0 0 12px!important;background:transparent!important;padding:0!important;border:0!important}
+.transfer-preview__eyebrow{font:750 10px/1.4 ui-monospace,SFMono-Regular,Consolas,monospace;color:#c8f56f;letter-spacing:.1em}
+.transfer-preview__title{font-size:17px!important;font-weight:770!important;line-height:1.3!important;margin:0!important;color:#f1f7ed!important;letter-spacing:-.02em;overflow-wrap:anywhere}
+.transfer-preview__description{font-size:12px!important;color:#b0c7b8!important;line-height:1.55!important;margin:0!important}
+.transfer-preview__gallery{display:grid;gap:10px}
+.transfer-preview__item{display:flex;gap:12px;align-items:center;min-width:0;padding:10px;background:#0c1e1c;border-radius:11px;border:1px solid #315147}
+.transfer-preview__item-details{display:flex;flex-direction:column;gap:5px;min-width:0;flex:1}
+.transfer-preview__filename{font-size:12px!important;color:#eaf4e7!important;overflow-wrap:anywhere}
+.transfer-preview__filesize{color:#94af9d;font-size:11px!important;overflow-wrap:anywhere}
+.transfer-preview__media{display:grid;place-items:center;overflow:hidden;border:1px solid #405f53;border-radius:10px;background:#071614;min-width:80px}
+.transfer-preview__item .transfer-preview__media{width:112px;max-width:35%;flex:none;min-height:80px}
+.transfer-preview__media :is(img,video){display:block;max-width:100%;max-height:400px;object-fit:contain;image-rendering:auto;background:#071614}
+.transfer-preview__item .transfer-preview__media :is(img,video){width:100%;height:93px;object-fit:cover}
+.transfer-preview__media audio{width:100%;min-width:130px;max-width:100%}
+.transfer-preview--ready>.transfer-preview__media{width:100%;max-height:420px;min-height:140px}
+.transfer-preview--ready>.transfer-preview__media video{width:100%;max-height:420px;aspect-ratio:16/9}
+.transfer-preview--ready>.transfer-preview__media img{width:100%;max-height:360px}
+.transfer-preview__file-icon,.transfer-preview__fallback{display:grid;place-items:center;width:56px;height:56px;flex:none;border-radius:9px;border:1px solid #4e7763;background:#254133;font:800 14px ui-monospace,Consolas,monospace;color:#d5ffb1}
+.transfer-preview__extra{font-size:12px;color:#b7d9bd}
+.transfer-preview__text{max-width:100%;max-height:155px;overflow:auto;margin:0;padding:12px;font:11px/1.5 ui-monospace,Consolas,monospace;color:#d8eccb;white-space:pre-wrap;overflow-wrap:anywhere}
+.transfer-preview__note{color:#a0bda8;font-size:11px;margin:11px 0 0}
+.transfer-preview__pending{display:flex;align-items:center;gap:12px;color:#acc7b0;font-size:12px}
+.transfer-preview__spinner{display:inline-block;flex:none;width:18px;height:18px;border:2px solid #6c936e;border-top-color:#d2ff8e;border-radius:50%;animation:transfer-spin .85s linear infinite}
+.transfer-preview--error{border-color:#98675a}
+.transfer-preview--reveal{animation:transfer-unfold .46s cubic-bezier(.22,1,.36,1) both;transform-origin:top center;will-change:clip-path,opacity}
+@keyframes transfer-unfold{0%{clip-path:inset(0 0 100% 0);opacity:0;transform:translateY(-12px)}100%{clip-path:inset(0 0 0 0);opacity:1;transform:translateY(0)}}
+@keyframes transfer-spin{to{transform:rotate(360deg)}}
+@media(max-width:640px){.transfer-preview{margin:12px 0;padding:14px 13px;border-radius:13px}.transfer-preview__title{font-size:15px!important}.transfer-preview__item{gap:9px;padding:8px}.transfer-preview__item .transfer-preview__media{width:85px;min-height:67px}.transfer-preview__item .transfer-preview__media :is(img,video){height:70px}.transfer-preview--ready>.transfer-preview__media video{max-height:290px}}
+@media(prefers-reduced-motion:reduce){.transfer-preview--reveal{animation:none!important;will-change:auto}.transfer-preview__spinner{animation:none!important}}
