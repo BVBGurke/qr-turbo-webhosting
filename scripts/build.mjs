@@ -98,6 +98,11 @@ try {
   copyFile(join(upstream, 'LICENSE'), join(output, 'licenses', 'BEAMFERRY-MIT.txt'));
   copyFile(join(upstream, 'THIRD_PARTY_NOTICES.md'), join(output, 'licenses', 'THIRD_PARTY_NOTICES.md'));
 
+  // Replace upstream's dense Chinese-language help paragraph with a concise English guide.
+  const senderHelp = join(output, 'send', 'index.html');
+  let helpHtml = readFileSync(senderHelp, 'utf8');
+  helpHtml = helpHtml.replace(/<details class="guide">[\s\S]*?<\/details>/, '<details class="guide"><summary>Performance tips & compatibility</summary><p class="tip">Start with four QR codes at 2068 B and 30 FPS. If your camera struggles, use fullscreen or reduce bytes per code to 1465 B. High frame rates are experimental. Dual-code mode is intended for the Android receiver. Press Space to pause playback.</p></details>');
+  writeFileSync(senderHelp, helpHtml);
   // Critical: the sender's embedded QR URL MUST point to the self-hosted receiver.
   patch(join(output, 'send', 'index.html'), [
     ['const RECEIVER_URL = "https://shuipashui.github.io/beamferry/";', 'const RECEIVER_URL = new URL("../receive/", location.href).href;'],

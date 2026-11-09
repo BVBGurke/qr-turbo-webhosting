@@ -255,5 +255,20 @@
   "环境：": "Environment:",
   "线程": "threads",
   "内存": "memory",
-  "二维码": "QR code"
+  "二维码": "QR code",
+  "主线程": "main thread",
+  "未知": "unknown",
+  "复制": "Copy",
+  "传 ": "sent ",
+  "屏 ": "display ",
+  "每 ": "every ",
+  "换": "change",
+  "下按 6 个 vsync 更新 5 次，quad full refresh": "on a 60 Hz display, update five times per six vsyncs in quad mode",
+  "每个刷新周期四slot全部更新；30 FPS 原稳定路径保持不变": "update all four slots every refresh; the stable 30 FPS mode remains unchanged",
+  "仍交错换对角": "still alternates diagonal pairs",
+  "只占 2×2 上排。50 FPS 使用 60 Hz 的 5/6 vsync 节拍；打on预填 2068 B · 50 FP": "uses the top two slots. The 50 FPS option uses a 5/6 vsync cadence on 60 Hz displays; defaults to 2068 B at 50 FPS",
+  "屏会尝试每次 vsync 全刷four codes；若unique符号率下降，请改回 30 FPS": "display refresh attempts all four codes every vsync; switch back to 30 FPS if unique-code detection drops",
+  "50 FPS 实验档：60 Hz 下按 6 个 vsync 更新 5 次，四码整屏同换": "50 FPS experimental mode: updates the four-code display five times per six vsyncs at 60 Hz.",
+  "60 FPS 实验档：每个刷新周期四格全部更新；30 FPS 原稳定路径保持不变": "60 FPS experimental mode: updates all four codes each refresh. Stable 30 FPS mode is unchanged.",
+  "四码 30 FPS 保持原整屏同换路径；60 FPS 是每个刷新周期四格全部更新的实验档，Android 需 0.8.119 或更高版本。双码只占 2×2 上排；50 FPS 使用 5/6 vsync 节拍。空格键暂停，全屏后右上角同样有效。": "Quad 30 FPS uses the stable full-frame update. Quad 60 FPS is experimental. Dual mode uses the upper two slots. Press Space to pause."
 }
