@@ -16,10 +16,24 @@
     focusMode=$('cameraFocusMode'), torch=$('cameraTorch'),
     quality=$('cameraQualityHint'), qualityLevel=$('cameraQualityLevel'),
     autoExposure=$('cameraAutoExposure'),
+    resolutionSelect=$('cameraResolution'),experimental120=$('cameraExperimental120'),
     flip=$('cameraFlip'), refocus=$('cameraRefocus'), focusMarker=$('cameraFocusMarker'),
     resolution=$('cameraActualResolution'), capabilitiesInfo=$('cameraCapabilityList');
   let track=null, devices=[], selectedId='', facing='environment', locked=false, torchOn=false,
     caps={}, settings={}, requestSerial=0;
+  try{
+    const saved=localStorage.getItem('qrt-camera-resolution');
+    if(resolutionSelect&&['balanced','detail','economy','auto'].includes(saved))resolutionSelect.value=saved;
+    if(experimental120)experimental120.checked=localStorage.getItem('qrt-camera-exp120')==='1';
+  }catch{}
+  resolutionSelect?.addEventListener('change',()=>{
+    try{localStorage.setItem('qrt-camera-resolution',resolutionSelect.value);}catch{}
+    note('Capture resolution updated. Restart scanning to apply it.');
+  });
+  experimental120?.addEventListener('change',()=>{
+    try{localStorage.setItem('qrt-camera-exp120',experimental120.checked?'1':'0');}catch{}
+    note('High-speed camera preference updated. Restart scanning to apply it.');
+  });
   const lensOverrides=new Map();
   const lensNames={ultra:'Ultra-wide',back:'Main / rear',tele:'Telephoto',
     front:'Front / selfie',macro:'Macro',unknown:'Other'};
@@ -309,9 +323,17 @@
   video.addEventListener('pointerdown',async e=>{
     if(!track||video.readyState<2)return;
     const rect=video.getBoundingClientRect();
-    const x=clamp((e.clientX-rect.left)/rect.width,0,1);
-    const y=clamp((e.clientY-rect.top)/rect.height,0,1);
-    focusMarker.style.left=(x*100)+'%';focusMarker.style.top=(y*100)+'%';
+    // object-fit:contain adds letterboxing. Map touch points to camera pixels,
+    // not the outer black bars, so focus cannot target the wrong area.
+    const iw=video.videoWidth||rect.width,ih=video.videoHeight||rect.height;
+    const scale=Math.min(rect.width/iw,rect.height/ih);
+    const shownW=iw*scale,shownH=ih*scale;
+    const offX=(rect.width-shownW)/2,offY=(rect.height-shownH)/2;
+    const sx=e.clientX-rect.left-offX,sy=e.clientY-rect.top-offY;
+    if(sx<0||sy<0||sx>shownW||sy>shownH)return;
+    const x=clamp(sx/shownW,0,1),y=clamp(sy/shownH,0,1);
+    focusMarker.style.left=((offX+sx)/rect.width*100)+'%';
+    focusMarker.style.top=((offY+sy)/rect.height*100)+'%';
     focusMarker.hidden=false;
     focusMarker.classList.remove('camera-focus-pulse');
     void focusMarker.offsetWidth;
@@ -344,19 +366,45 @@
   }
   navigator.mediaDevices?.addEventListener?.('devicechange',()=>void listCameras());
   async function request(media){
-    try{return await navigator.mediaDevices.getUserMedia(media);}
-    catch(e){
-      if(!media?.video?.deviceId?.exact||!['OverconstrainedError','NotFoundError','NotReadableError'].includes(e?.name))throw e;
-      selectedId='';
-      const fallback={...media.video};
+    if(!navigator.mediaDevices?.getUserMedia)throw Error('Camera requires HTTPS or localhost.');
+    const wanted=media?.video&&typeof media.video==='object'?media.video:{};
+    const attempts=[media];
+    if(wanted.deviceId?.exact){
+      const fallback={...wanted};
       delete fallback.deviceId;
       fallback.facingMode={ideal:facing};
-      note('Preferred lens unavailable. Trying another camera.');
-      return navigator.mediaDevices.getUserMedia({...media,video:fallback});
+      attempts.push({...media,video:fallback});
     }
+    // Browser capture APIs vary significantly on phones. Relax quality/FPS before
+    // dropping the chosen lens or asking for permissions a second time.
+    const loose={...wanted};
+    delete loose.width;delete loose.height;delete loose.frameRate;
+    if(wanted.deviceId?.exact){
+      attempts.push({...media,video:loose});
+      delete loose.deviceId;loose.facingMode={ideal:facing};
+    }
+    attempts.push({...media,video:loose});
+    attempts.push({video:{facingMode:{ideal:facing}},audio:false});
+    let last;
+    for(let index=0;index<attempts.length;index++){
+      try{
+        const stream=await navigator.mediaDevices.getUserMedia(attempts[index]);
+        if(index>0)note('Camera started with compatible resolution and frame rate.');
+        return stream;
+      }catch(e){
+        last=e;
+        if(!['OverconstrainedError','NotFoundError','NotReadableError','AbortError','TypeError'].includes(e?.name))
+          throw e; // Never mask a permission denial or missing secure context.
+      }
+    }
+    throw last||Error('No compatible camera available');
   }
   function constraints(base){
     const c={...base};
+    const mode=resolutionSelect?.value||'balanced';
+    const target={balanced:[1920,1080],detail:[2560,1440],economy:[1280,720]}[mode];
+    if(target){c.width={ideal:target[0]};c.height={ideal:target[1]};}
+    else {delete c.width;delete c.height;}
     if(selectedId){delete c.facingMode;c.deviceId={exact:selectedId};}
     else c.facingMode={ideal:facing};
     return c;
@@ -440,6 +488,7 @@
 
   window.QRTurboCamera={
     constraints,request,onTrack,onStop,onError,listCameras,cameraRole,readableName,resolvedRole,
+    get preferHighFps(){return !!experimental120?.checked;},
     get state(){return {selectedId,facing,devices:devices.map(d=>({label:d.label,role:cameraRole(d.label).id})),settings,caps};}
   };
   disable(torch,'Start scanning first.');disable(zoom,'Start scanning first.');

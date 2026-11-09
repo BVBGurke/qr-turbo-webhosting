@@ -72,3 +72,8 @@ body.oil-app .camera-map-entry select{min-width:145px;max-width:240px;min-height
   border-radius:8px!important}
 @media(max-width:410px){.camera-map-entry label{align-items:stretch;flex-direction:column}
   body.oil-app .camera-map-entry select{max-width:100%;width:100%}}
+
+.camera-highfps{display:flex;align-items:center;gap:8px;color:#c1d9bf;font-size:11px;line-height:1.5}
+.camera-highfps input{width:16px;height:16px;accent-color:#c8f56f}
+body.oil-app #cameraResolution{background:#101e1a!important;color:#eaf5e7!important;border:1px solid #4b6d56!important;
+ min-height:44px!important;padding:9px 12px!important;border-radius:10px!important;width:100%!important}
