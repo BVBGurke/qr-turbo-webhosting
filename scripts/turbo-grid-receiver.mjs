@@ -23,6 +23,32 @@ const robustScanner=scanner.replace(
 );
 if(robustScanner===scanner)throw Error('Turbo Grid scanner dispatch patch anchor missing');
 
+const orientationScanner=robustScanner
+  .replace(
+    '  function turboGridBounds() {\n    const columns=4,rows=turboGridMode===8?2:4;\n    if(turboGridRect)return turboGridRect;',
+    '  function turboGridShape() {\n'+
+    '    const portrait=(video.videoHeight||0)>(video.videoWidth||0);\n'+
+    '    const columns=turboGridMode===8&&portrait?2:4;\n'+
+    '    return {columns,rows:turboGridMode===8?8/columns:4};\n'+
+    '  }\n'+
+    '  function turboGridBounds() {\n'+
+    '    const {columns,rows}=turboGridShape();\n'+
+    '    if(turboGridRect)return turboGridRect;'
+  )
+  .replace(
+    '    const bounds=turboGridBounds(),columns=4,rows=turboGridMode===8?2:4;',
+    '    const bounds=turboGridBounds(),{columns,rows}=turboGridShape();'
+  )
+  .replace(/  function noteTurboGridHit\(code,origin\) \{[\s\S]*?\n  \}\n  function decodeTurboGridFrame\(\) \{/,
+    '  function noteTurboGridHit(code) {\n'+
+    '    const parsed=H?.parseFrame(code?.bytes);\n'+
+    '    if(!parsed||parsed.header.layoutCodes<8||turboGridRect)return;\n'+
+    '    turboGridRect=turboGridBounds();\n'+
+    '  }\n'+
+    '  function decodeTurboGridFrame() {'
+  );
+if(orientationScanner===robustScanner)throw Error('Turbo Grid orientation patch anchor missing');
+
 export function addTurboGridReceivers(dist){
   for(const mode of ['receive','screen','import']){
     const js=join(dist,mode,'app.js'),html=join(dist,mode,'index.html');
@@ -31,7 +57,7 @@ export function addTurboGridReceivers(dist){
     requirePatch(js,'      const codes = normalizeDecodedCodes(decoded);\n      validQrFrames += codes.length;',
       '      const codes = normalizeDecodedCodes(decoded);\n      if(codes.length)highScanMisses=0;\n      validQrFrames += codes.length;');
     requirePatch(js,'  function scanWithHighSpeedWorkers() {',
-      robustScanner+'\n  function scanWithHighSpeedWorkers() {');
+      orientationScanner+'\n  function scanWithHighSpeedWorkers() {');
     if(mode==='screen') {
       requirePatch(js,'    if (highMultiLayout) {\n      return decodeQuadFrame();',
         '    if (turboGridMode>=8) return decodeTurboGridFrame();\n    if (highMultiLayout) {\n      return decodeQuadFrame();');

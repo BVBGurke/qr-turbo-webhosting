@@ -117,7 +117,11 @@ async function test(viewport){
   }));
   assert.ok(docWidth.scroll-docWidth.client<10,'Camera page horizontally overflows: '+JSON.stringify(docWidth));
   if(viewport.width>=650){
+    const cases=[];
     for(const [senderLayout,receiverLayout] of [['single','1'],['quad','4'],['octa','8'],['hexadeca','16']]){
+      for(const rotation of [0,90,180,270])cases.push([senderLayout,receiverLayout,rotation]);
+    }
+    for(const [senderLayout,receiverLayout,rotation] of cases){
       const sender=await ctx.newPage();
       await sender.goto(origin+'/send/',{waitUntil:'load'});
       await sender.evaluate(()=>{
@@ -133,7 +137,18 @@ async function test(viewport){
       await sender.getByRole('button',{name:'Prepare QR stream'}).click();
       await sender.waitForFunction(()=>!document.getElementById('playBtn')?.disabled,null,{timeout:15000});
       await sender.locator('#playBtn').evaluate(button=>button.click());
-      const frame=await sender.locator('#qrCanvas').evaluate(canvas=>canvas.toDataURL('image/png'));
+      const frame=await sender.locator('#qrCanvas').evaluate((canvas,rotation)=>{
+        if(!rotation)return canvas.toDataURL('image/png');
+        const rotated=document.createElement('canvas');
+        const sideways=rotation===90||rotation===270;
+        rotated.width=sideways?canvas.height:canvas.width;
+        rotated.height=sideways?canvas.width:canvas.height;
+        const context=rotated.getContext('2d');
+        context.translate(rotated.width/2,rotated.height/2);
+        context.rotate(rotation*Math.PI/180);
+        context.drawImage(canvas,-canvas.width/2,-canvas.height/2);
+        return rotated.toDataURL('image/png');
+      },rotation);
       await sender.close();
 
       if(await page.evaluate(()=>window.QRTurboCameraBridge.isRunning()))
@@ -160,7 +175,7 @@ async function test(viewport){
       await page.waitForFunction(()=>document.getElementById('fileName')?.textContent==='qr-scan-smoke.txt',
         {timeout:20000});
       assert.match(await page.locator('#status').innerText(),/received|complete/i);
-      console.log('PASS: end-to-end QR layout '+senderLayout+' → '+receiverLayout+'.');
+      console.log('PASS: end-to-end QR layout '+senderLayout+' → '+receiverLayout+' at '+rotation+'°.');
     }
   }
   if(await page.evaluate(()=>window.QRTurboCameraBridge.isRunning())){
