@@ -120,3 +120,19 @@ console.log('Camera Studio wired into live scanner and permission-aware controls
 
 if(!cameraPage.includes('id="cameraQualityHint"')||!cameraPage.includes('id="cameraAutoExposure"'))throw new Error('Camera quality feedback UI is missing');
 if(!cameraApp.includes('QRTurboCamera.request({'))throw new Error('Missing fallback camera acquisition');
+
+const benchmarkFiles=['benchmark/index.html','benchmark/benchmark-core.mjs',
+  'benchmark/benchmark-app.mjs','benchmark/benchmark-store.mjs','benchmark/benchmark.css'];
+for(const asset of benchmarkFiles){
+ if(!existsSync(join(dir,asset)))throw new Error('Benchmark Lab asset missing: '+asset);
+}
+const benchmarkHTML=readFileSync(join(dir,'benchmark/index.html'),'utf8');
+for(const token of ['lang="de"','id="startBenchmark"','id="runMatrix"',
+  'id="sourcePreview"','id="resultRows"','data-preset="overdrive"']){
+ if(!benchmarkHTML.includes(token))throw new Error('Benchmark Lab UI missing: '+token);
+}
+for(const path of ['index.html','send/index.html','receive/index.html','screen/index.html','import/index.html']){
+ if(!readFileSync(join(dir,path),'utf8').includes('benchmark/'))
+  throw new Error('Benchmark navigation missing: '+path);
+}
+console.log('Benchmark Lab: statischer Build und Navigation geprüft.');
