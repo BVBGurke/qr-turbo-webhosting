@@ -26,7 +26,7 @@ function fixSender(path) {
   replaceRequired(path, '      const encoder = new H.LTEncoder(packed.container, blockLen, sessionId);',
     '      // Protocol stores k as uint16. Validate it using the selected QR payload.\n' +
     '      const requiredBlocks = Math.ceil(packed.container.length / blockLen);\n' +
-    '      if (requiredBlocks > 0xffff) {\n' +
+    '      if (codesPerScreen < 8 && requiredBlocks > 0xffff) {\n' +
     '        const capacityMiB = (0xffff * blockLen / 1048576).toFixed(1);\n' +
     '        throw new Error("This file needs " + requiredBlocks.toLocaleString() +\n' +
     '          " QR blocks; the protocol supports 65,535 (" + capacityMiB +\n' +

@@ -100,7 +100,13 @@ export function addTurboGrid(output) {
   patch(sender,'</script>\n  <script>(() => {\n  const H = window.AirFerryHighSpeed;',
     '</script>\n  <script src="../turbo-protocol.js"></script>\n  <script>(() => {\n  const H = window.AirFerryHighSpeed;');
   for(const [before,after] of senderEdits) patch(sender,before,after);
-  for(const route of ['receive','screen']){
+  patch(sender,'<section class="control-card"', '<section class="turbo-presets" aria-label="Performance profiles"><div class="turbo-presets-heading"><b>TRANSMISSION PROFILES</b><span>Tap a preset or customize below</span></div><div class="turbo-presets-grid"><button type="button" data-turbo-profile="safe">Reliable · 1 QR</button><button type="button" data-turbo-profile="quad">Balanced · 4 QR</button><button type="button" data-turbo-profile="octa">Turbo · 8 QR</button><button type="button" data-turbo-profile="hexadeca">Extreme · 16 QR</button><button type="button" data-turbo-profile="overdrive">Overdrive · 16 QR / 120 FPS</button></div><p id="turboProfileInfo" class="turbo-profile-info" role="status">Larger QR grids work best with high-resolution displays and screen capture.</p></section><section class="control-card"');
+  for(const route of ['send','receive','screen','import']){
+    const html=join(output,route,'index.html');
+    patch(html,'</head>','<link rel="stylesheet" href="../turbo-grid.css"></head>');
+    patch(html,'</body>','<script defer src="../turbo-grid-ui.js"></script></body>');
+  }
+  for(const route of ['receive','screen','import']){
     const html=join(output,route,'index.html');
     patch(html,'<script src="highspeed-protocol.js"></script>',
       '<script src="highspeed-protocol.js"></script>\n  <script src="../turbo-protocol.js"></script>');

@@ -16,8 +16,13 @@ export function addTurboGridReceivers(dist){
       '  const HIGH_QUAD_GRAB_MS = 12;\n  let turboGridMode=0;\n  let turboGridCursor=0;\n  let turboGridRect=null;\n  let turboGridScanCount=0;');
     requirePatch(js,'  function scanWithHighSpeedWorkers() {',
       scanner+'\n  function scanWithHighSpeedWorkers() {');
-    requirePatch(js,'    if (highMultiLayout) {\n      decodeQuadFrame();',
-      '    if (turboGridMode>=8) {\n      decodeTurboGridFrame();\n      return;\n    }\n    if (highMultiLayout) {\n      decodeQuadFrame();');
+    if(mode==='screen') {
+      requirePatch(js,'    if (highMultiLayout) {\n      return decodeQuadFrame();',
+        '    if (turboGridMode>=8) return decodeTurboGridFrame();\n    if (highMultiLayout) {\n      return decodeQuadFrame();');
+    } else {
+      requirePatch(js,'    if (highMultiLayout) {\n      decodeQuadFrame();',
+        '    if (turboGridMode>=8) {\n      decodeTurboGridFrame();\n      return;\n    }\n    if (highMultiLayout) {\n      decodeQuadFrame();');
+    }
     requirePatch(js,'      for (const code of codes) acceptDecodedBytes(code.bytes);',
       '      for (const code of codes) { noteTurboGridHit(code,origin); acceptDecodedBytes(code.bytes); }');
     requirePatch(js,'      if (parsed.header.layoutCodes !== 1 && parsed.header.layoutCodes !== 4) {',

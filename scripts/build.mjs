@@ -12,6 +12,8 @@ import { dirname, join, resolve } from 'node:path';
 import { addVideoRoutes } from './video-routes.mjs';
 import { improveOilUI } from './oil-routes.mjs';
 import { addOfflineSenderHooks } from './offline-sender.mjs';
+import { addTurboGrid } from './turbo-grid.mjs';
+import { addTurboGridReceivers } from './turbo-grid-receiver.mjs';
 import { removeFixedTransferCaps } from './size-limits.mjs';
 
 const project = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -144,6 +146,8 @@ try {
   }
   for (const [mode, path] of [['send','send/index.html'], ['receive','receive/index.html'], ['screen','screen/index.html']]) addCommonUI(join(output, path), mode);
   addVideoRoutes(output);
+  addTurboGrid(output);
+  addTurboGridReceivers(output);
   improveOilUI(output);
   for (const path of ['receive', 'screen']) {
     const manifestFile = join(output, path, 'manifest.webmanifest');
