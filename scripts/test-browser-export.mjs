@@ -39,6 +39,11 @@ async function exportTest(page,mode,preset,software){
   });
   await page.locator('#oilModeVideo').click();
   await page.selectOption('#exportPreset',preset);
+  if(mode==='dual'){
+    await page.selectOption('#exportLayout','dual');
+    await page.selectOption('#exportFPS','24');
+    await page.selectOption('#exportPayload','1003');
+  }
   if(software) await page.locator('#exportUseGPU').uncheck();
   await page.locator('#exportHeadless').check();
   const selected=await page.evaluate(()=>({
@@ -92,6 +97,8 @@ async function exportTest(page,mode,preset,software){
   assert.equal(preview.controls,true);
   assert.equal(preview.gpuDisabled,false,'GPU mode was not unlocked after exporting');
   if(mode==='16qr-120fps')assert.equal(stream.r_frame_rate,'120/1');
+  if(mode==='dual')assert.equal(stream.r_frame_rate,'24/1');
+  if(mode==='octa')assert.ok(stream.width>stream.height,'8-code output must use a 4x2 aspect ratio');
   console.log(JSON.stringify({scenario:mode,size,codec:stream.codec_name,
     dimensions:stream.width+'x'+stream.height,frames:stream.nb_read_frames,
     duration:probe.format.duration,rate:stream.r_frame_rate,
@@ -99,14 +106,60 @@ async function exportTest(page,mode,preset,software){
   if(errors.length)throw Error('Unexpected browser exceptions: '+errors.join('; '));
   return out;
 }
+async function importTest(page,videoFile){
+  const errors=[];
+  page.on('pageerror',e=>errors.push(String(e)));
+  await page.goto(url+'/import/',{waitUntil:'load'});
+  await page.locator('#videoImportFile').setInputFiles(videoFile);
+  await page.locator('#videoImportStart').click();
+  try {
+    await page.waitForFunction(()=>{
+      const state=document.querySelector('#importPreviewState')?.textContent||'';
+      return state==='Decoded'||state==='Error';
+    },null,{timeout:100000});
+  }catch(error){
+    const details=await page.evaluate(()=>({
+      progress:document.querySelector('#progressText')?.textContent,
+      status:document.querySelector('#status')?.textContent,
+      state:document.querySelector('#importPreviewState')?.textContent,
+      packets:document.querySelector('#importPackets')?.textContent,
+      filename:document.querySelector('#fileName')?.textContent,
+      events:document.querySelector('#videoDataLog')?.textContent?.slice(-1400)
+    }));
+    throw Error('Video import did not complete: '+JSON.stringify(details)+' JS: '+errors.join('; ')+' '+error);
+  }
+  const state=await page.locator('#importPreviewState').textContent();
+  if(state!=='Decoded'){
+    const details=await page.evaluate(()=>({
+      info:document.querySelector('#videoImportInfo')?.textContent,
+      status:document.querySelector('#status')?.textContent,
+      log:document.querySelector('#videoDataLog')?.textContent?.slice(-2500)
+    }));
+    throw Error('Video import failed: '+JSON.stringify(details));
+  }
+  const received=await page.evaluate(async()=>{
+    const url=document.querySelector('#download')?.href;
+    if(!url?.startsWith('blob:'))throw Error('Recovered-file download is missing');
+    const bytes=await (await fetch(url)).arrayBuffer();
+    return [...new Uint8Array(bytes)];
+  });
+  const actual=Buffer.from(received).toString('utf8');
+  assert.ok(actual.startsWith('QR Turbo real browser E2E single'),'Original file content mismatch');
+  assert.ok(actual.includes('abc123'),'Recovered file is incomplete');
+  console.log(JSON.stringify({scenario:'export -> video import -> decoded original file',
+    recovered:received.length,packets:await page.locator('#importPackets').textContent(),errors}));
+}
 try{
   await waitForServer();
   const exe=process.env.QR_TURBO_CHROME;
   browser=await chromium.launch({headless:true,...(exe?{executablePath:exe}:{channel:'chrome'}),
     args:['--no-sandbox','--disable-dev-shm-usage','--enable-features=WebCodecs']});
   const page=await browser.newPage({acceptDownloads:true,viewport:{width:1280,height:900}});
-  const scenario=process.env.QR_TURBO_SCENARIOS||'single,16qr-120fps';
-  if(scenario.includes('single'))await exportTest(page,'single','tiny',true);
+  const scenario=process.env.QR_TURBO_SCENARIOS||'single,dual,quad,octa,16qr-120fps';
+  let singleFile=null;
+  if(scenario.includes('single'))singleFile=await exportTest(page,'single','tiny',true);
+  if(singleFile && process.env.QR_TURBO_SKIP_IMPORT!=='1') await importTest(page,singleFile);
+  if(scenario.includes('dual'))await exportTest(page,'dual','custom',true);
   if(scenario.includes('quad'))await exportTest(page,'quad','balanced',false);
   if(scenario.includes('octa'))await exportTest(page,'octa','grid8',true);
   if(scenario.includes('16qr-120fps'))await exportTest(page,'16qr-120fps','grid16x120',true);
