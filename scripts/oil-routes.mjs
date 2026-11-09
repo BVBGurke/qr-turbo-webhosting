@@ -7,9 +7,9 @@ const META={
  screen:['03 / SCREEN','Receive from a screen','Capture the window or tab displaying QR codes.'],
  import:['04 / VIDEO','Import a QR video','Decode a recorded transfer and save the recovered file.']
 };
-const ITEMS=[['send','Send','▣'],['receive','Camera','◎'],['screen','Screen','▤'],['import','Import video','▶']];
+const ITEMS=[['send','Send','▣'],['receive','Camera','◎'],['screen','Screen','▤'],['import','Import video','▶'],['benchmark','Benchmark Lab','▦']];
 function links(current,mobile){
-  return ITEMS.map(([id,name,icon])=>'<a href="../'+id+'/"'+(id===current?' aria-current="page"':'')+'>'+(mobile?'<span aria-hidden="true">'+icon+'</span>':'')+(mobile&&id==='import'?'Video':name)+'</a>').join('');
+  return ITEMS.map(([id,name,icon])=>'<a href="../'+id+'/"'+(id===current?' aria-current="page"':'')+'>'+(mobile?'<span aria-hidden="true">'+icon+'</span>':'')+(mobile&&id==='import'?'Video':mobile&&id==='benchmark'?'Lab':name)+'</a>').join('');
 }
 function pageHeader(mode){
   const [index,title,description]=META[mode];

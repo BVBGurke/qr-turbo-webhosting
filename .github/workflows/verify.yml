@@ -29,3 +29,5 @@ jobs:
         run: node scripts/test-browser-export.mjs
       - name: Browser E2E — camera controls with simulated video track
         run: node scripts/test-camera-browser.mjs
+      - name: Browser E2E — Benchmark Lab codec, matrix and downloads
+        run: node scripts/test-benchmark-browser.mjs

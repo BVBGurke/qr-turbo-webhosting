@@ -185,6 +185,7 @@ try {
     app: 'QR Turbo',
     basedOn: 'shuipashui/beamferry',
     upstreamRef: process.env.UPSTREAM_DIR ? 'local checkout' : UPSTREAM_REF,
+    commit: process.env.VERCEL_GIT_COMMIT_SHA || process.env.GITHUB_SHA || null,
     createdAt: new Date().toISOString(),
     note: 'BeamFerry QR format preserved; fixed 64 MiB app cap removed, on-wire size and block limits enforced.',
   }, null, 2));
