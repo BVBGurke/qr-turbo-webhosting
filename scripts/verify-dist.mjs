@@ -33,3 +33,11 @@ if(!sender.includes('id="oilModeLive"')||!sender.includes('id="oilModeVideo"'))t
 if(!sender.includes('id="oilFast120"'))throw new Error('High FPS select missing');
 for(const path of ['oil-design.css','oil-design.js'])if(!existsSync(join(dir,path)))throw new Error('Missing design asset '+path);
 console.log('Oil UI cross-route design verification passed.');
+
+if(!sender.includes('QRTurboOfflineFrames')) throw new Error('Offline frame API missing');
+if(!sender.includes('exportCustomSettings')||!sender.includes('exportFPS')||!sender.includes('exportLayout')) throw new Error('Custom video controls missing');
+if(!sender.includes('120 FPS')) throw new Error('120 FPS video choice missing');
+const offline=readFileSync(join(dir,'video-export.js'),'utf8');
+if(!offline.includes('VideoEncoder')||!offline.includes('WebMWriter')||offline.includes('new MediaRecorder'))throw new Error('Offline WebCodecs encoder not configured');
+if(!existsSync(join(dir,'webm-writer.js')))throw new Error('Missing WebM writer');
+console.log('Offline video generation and custom 4 QR 120 FPS verified.');

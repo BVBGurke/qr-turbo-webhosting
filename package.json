@@ -6,7 +6,7 @@
   "description": "Self-hosted optical file transfer frontend built from MIT-licensed BeamFerry",
   "scripts": {
     "build": "node scripts/build.mjs",
-    "test": "node --check scripts/build.mjs && node --check scripts/video-routes.mjs && node --check site/app.js && node --check site/ui.js && node --check site/video-export.js && node --check site/video-import.js && node --check site/oil-design.js && node --check scripts/oil-routes.mjs",
+    "test": "node --check scripts/build.mjs && node --check scripts/video-routes.mjs && node --check site/app.js && node --check site/ui.js && node --check site/video-export.js && node --check site/video-import.js && node --check site/oil-design.js && node --check scripts/oil-routes.mjs && node --check site/webm-writer.js && node --check scripts/offline-sender.mjs",
     "preview": "python3 -m http.server 8080 --directory dist",
     "test:dist": "node scripts/verify-dist.mjs"
   },

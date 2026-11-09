@@ -90,19 +90,26 @@ export function addVideoRoutes(output) {
   exp = mustReplace(exp, '<body>', '<body class="video-export-page">', exportPath);
   exp = mustReplace(exp, '</head>', '<link rel="stylesheet" href="../video.css"></head>', exportPath);
   exp = mustReplace(exp, '<div class="status">', String.raw`<section class="video-tool-panel" id="videoExportPanel" aria-label="Export QR video">
-    <h2>Save the QR sequence as a video</h2>
-    <p>Send files live using the controls above, or save the same QR transfer as a compact video. The exported video can be decoded under Import Video.</p>
+    <h2>Create and download a QR video</h2>
+    <p>Generate the complete QR video directly in your browser. No realtime recording and no upload. Export is WebM (VP8/VP9) and needs a browser with WebCodecs.</p>
     <div class="video-field-grid">
       <label>File size / reliability<select id="exportPreset">
         <option value="tiny">Smallest · experimental</option>
         <option value="compact" selected>Compact · recommended</option>
         <option value="balanced">Balanced · four QR codes</option>
         <option value="fast">Faster · larger video</option>
+        <option value="custom">Custom · choose layout / FPS</option>
       </select></label>
-      <label>Record duration<select id="exportDuration">
+      <label>Video duration<select id="exportDuration">
         <option value="auto" selected>Auto · with redundancy</option><option value="30">30 seconds</option><option value="60">60 seconds</option>
         <option value="120">2 minutes</option><option value="240">4 minutes</option>
       </select></label>
+    </div>
+    <div class="video-field-grid" id="exportCustomSettings" hidden>
+      <label>QR code layout<select id="exportLayout"><option value="quad" selected>Four QR codes</option><option value="single">One QR code</option></select></label>
+      <label>QR video frame rate<select id="exportFPS"><option value="10">10 FPS</option><option value="12">12 FPS</option><option value="15">15 FPS</option><option value="20">20 FPS</option><option value="24">24 FPS</option><option value="30" selected>30 FPS</option><option value="50">50 FPS</option><option value="60">60 FPS</option><option value="90">90 FPS</option><option value="120">120 FPS · experimental</option></select></label>
+      <label>Payload per QR code<select id="exportPayload"><option value="1003">1003 bytes</option><option value="1273">1273 bytes</option><option value="1465" selected>1465 bytes</option><option value="1732">1732 bytes</option><option value="1952">1952 bytes</option><option value="2068">2068 bytes</option></select></label>
+      <p class="video-warning">Four QR codes at 120 FPS is supported for export, but some decoders and displays skip frames. Test your video with Import Video.</p>
     </div>
     <details class="video-settings"><summary>Advanced compression</summary>
       <div class="video-field-grid">
@@ -115,11 +122,11 @@ export function addVideoRoutes(output) {
       <label class="video-check"><input type="checkbox" id="exportPreview" checked> Show preview</label>
       <button type="button" class="video-preview-toggle" id="exportTogglePreview" aria-pressed="true">Hide preview</button>
     </div>
-    <div class="encoded-preview-stage" id="encodedPreviewStage"><canvas id="exportEncodedPreview" width="340" height="340" aria-label="Exact QR recording preview"></canvas><span id="exportPreviewPlaceholder">Select a file to see the encoded video frames</span></div>
-    <div class="video-buttons"><button type="button" id="exportRecord">Prepare and record video</button><button type="button" id="exportStop" disabled>Stop recording</button></div>
+    <div class="encoded-preview-stage" id="encodedPreviewStage"><canvas id="exportEncodedPreview" width="340" height="340" aria-label="Exact QR video frame preview"></canvas><span id="exportPreviewPlaceholder">Select a file to see the encoded video frames</span></div>
+    <div class="video-buttons"><button type="button" id="exportRecord">Create and download video</button><button type="button" id="exportStop" disabled>Cancel generation</button></div>
     <progress id="exportProgress" value="0" max="100"></progress>
     <output id="exportEstimatedSize">Compact video profile · estimate after file preparation.</output>
-    <output id="exportStatus" role="status">Choose a file above and click Prepare and record video.</output>
+    <output id="exportStatus" role="status">Choose a file above, then click Create and download video.</output>
     <a id="exportDownload" class="video-download" hidden download>Download QR video</a>
   </section>
   <div class="status">`, exportPath);

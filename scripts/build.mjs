@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
 import { addVideoRoutes } from './video-routes.mjs';
 import { improveOilUI } from './oil-routes.mjs';
+import { addOfflineSenderHooks } from './offline-sender.mjs';
 
 const project = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const output = join(project, 'dist');
@@ -123,6 +124,7 @@ try {
   senderEdit('        drawPatternTile(context, pattern, col * metrics.tilePx, row * metrics.tilePx, metrics.quiet, metrics.scale);\n      });',
     '        drawPatternTile(context, pattern, col * metrics.tilePx, row * metrics.tilePx, metrics.quiet, metrics.scale);\n      });\n      if (typeof window.QRTurboOnQRRender === "function") window.QRTurboOnQRRender(patterns);');
   writeFileSync(senderPath, senderMarkup);
+  addOfflineSenderHooks(senderPath);
 
   // Critical: the sender's embedded QR URL MUST point to the self-hosted receiver.
   patch(join(output, 'send', 'index.html'), [
