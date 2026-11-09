@@ -41,25 +41,6 @@ function enhanceReceiverApp(source){
     '    } catch (err) {\n      closeCamera();\n      status.textContent = err.message === "DecoderUnavailable"',
     '    } catch (err) {\n      closeCamera();\n      window.QRTurboCamera?.onError(err);\n      status.textContent = err.message === "DecoderUnavailable"',
     'camera failure');
-  // Actual QR corner coordinates are reported by the *real* decoder, not
-  // synthesized; the preview overlays only the currently detected codes.
-  source=replaceOnce(source,
-    '  function updateHighScanRoiFromHits(codes, origin) {\n    const corners = [];',
-    '  function updateHighScanRoiFromHits(codes, origin) {\n'+
-    '    if (codes?.length && origin && window.QRTurboCameraViewer) {\n'+
-    '      const hits = codes.map(code => {\n'+
-    '        const position=code?.position;\n'+
-    '        if (!position) return null;\n'+
-    '        const corners=[position.topLeft,position.topRight,position.bottomRight,position.bottomLeft].filter(Boolean).map(p=>({\n'+
-    '          x:origin.x+p.x*origin.srcW/origin.outW,\n'+
-    '          y:origin.y+p.y*origin.srcH/origin.outH\n'+
-    '        }));\n'+
-    '        return corners.length>=3?{corners,videoWidth:video.videoWidth,videoHeight:video.videoHeight}:null;\n'+
-    '      }).filter(Boolean);\n'+
-    '      if (hits.length)window.dispatchEvent(new CustomEvent("qr-turbo:scan-hit",{detail:{hits}}));\n'+
-    '    }\n'+
-    '    const corners = [];',
-    'live decoded QR detection overlay');
   source=replaceOnce(source,'  startHighSpeedWorkers();\n})();',
     CAMERA_BRIDGE + '\n  startHighSpeedWorkers();\n})();',
     'camera switch bridge');

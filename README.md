@@ -7,7 +7,7 @@ A self-hosted, browser-based file transfer website using animated QR codes. Base
 - English-only navigation, controls, status messages, and diagnostics
 - Simple **Send**, **Camera**, and **Screen** tabs
 - Advanced settings and diagnostics are collapsed by default
-- Four simultaneous QR codes; stable 30 FPS preset and experimental higher FPS modes
+- One-, four-, eight-, and sixteen-code QR layouts; stable 30 FPS preset and experimental higher FPS modes
 - Browser-only static hosting; no application backend and no file upload
 - Modern UI using [Pico CSS](https://picocss.com/) design styles, with local styling fallback
 
@@ -90,9 +90,10 @@ Video import depends on the browser being able to decode the selected file forma
 npm run test
 npm run build
 npm run test:dist
+npm run test:camera
 ```
 
-The CI **Verify build** workflow checks the project independently of GitHub Pages deployment settings.
+The CI **Verify build** workflow checks the project independently of GitHub Pages deployment settings. The camera E2E test sends generated QR frames through simulated camera and screen-capture streams, covers 1/4/8/16 layouts at 0°, 90°, 180°, and 270°, and checks desktop/mobile viewport behavior. To run it in Edge, use `$env:BROWSER_CHANNEL='msedge'; npm run test:camera` in PowerShell. Simulated streams do not certify every physical camera, autofocus mode, or iOS Safari version; camera access on other LAN devices requires HTTPS, while `localhost` is allowed for local testing.
 
 Both video tabs have an accessible **Show preview / Hide preview** button and checkbox. Export hides only the on-screen QR view (canvas recording keeps running). Import displays a video player next to the selected file, and hiding the preview does not disable frame decoding. The local packet log and decoding metrics remain visible.
 
@@ -110,7 +111,7 @@ The encoder attempts to capture each QR update with `captureStream(0)` and `requ
 
 ## Turbo Grid V2 (8 / 16 QR codes)
 
-New experimental high-density layouts: **8 QR codes (4×2)** and **16 QR codes (4×4)**, with touch-friendly presets and an **Overdrive 16×120 FPS** profile. Both live streaming and locally generated WebM videos use the same V2 optical packets. The receiver offers **Auto / 8 / 16** grid scanning settings.
+New experimental high-density layouts: **8 QR codes (4×2)** and **16 QR codes (4×4)**, with touch-friendly presets and an **Overdrive 16×120 FPS** profile. Both live streaming and locally generated WebM videos use the same V2 optical packets. The receiver offers **Auto / 1 / 4 / 8 / 16** grid scanning settings and a persistent per-QR recognition overlay.
 
 V2 packets include a 32-bit block count (instead of V1's 16-bit field) and the QR tile index, enabling high-density grid tracking. V1 remains backward compatible. High-FPS profiles update four tiles at a time; values such as 16×120 FPS are target settings, not proven camera throughput. The actual results depend heavily on optical resolution and hardware.
 

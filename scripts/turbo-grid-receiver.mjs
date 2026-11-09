@@ -40,8 +40,12 @@ const orientationScanner=robustScanner
     '    const bounds=turboGridBounds(),{columns,rows}=turboGridShape();'
   )
   .replace(/  function noteTurboGridHit\(code,origin\) \{[\s\S]*?\n  \}\n  function decodeTurboGridFrame\(\) \{/,
-    '  function noteTurboGridHit(code) {\n'+
-    '    const parsed=H?.parseFrame(code?.bytes);\n'+
+    '  function noteTurboGridHit(code,origin) {\n'+
+    '    const parsed=H?.parseFrame(code?.bytes),position=code?.position;\n'+
+    '    if(window.QRTurboCameraViewer&&position&&origin) {\n'+
+    '      const corners=[position.topLeft,position.topRight,position.bottomRight,position.bottomLeft].filter(p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y)).map(p=>({x:origin.x+p.x*origin.srcW/origin.outW,y:origin.y+p.y*origin.srcH/origin.outH}));\n'+
+    '      if(corners.length>=3)window.dispatchEvent(new CustomEvent("qr-turbo:scan-hit",{detail:{hits:[{corners,videoWidth:video.videoWidth,videoHeight:video.videoHeight,layoutCodes:parsed?.header.layoutCodes||1,tileIndex:parsed?.header.tileIndex,sessionId:parsed?.header.sessionId}]}}));\n'+
+    '    }\n'+
     '    if(!parsed||parsed.header.layoutCodes<8||turboGridRect)return;\n'+
     '    turboGridRect=turboGridBounds();\n'+
     '  }\n'+

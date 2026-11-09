@@ -24,11 +24,17 @@ body.oil-app .camera-stage-btn:disabled{opacity:.45!important}
 .camera-stage-ui__bottom{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;
  padding:14px;background:linear-gradient(transparent,#000b)}
 .camera-stage-ui__stats{min-height:32px;max-width:47%;display:flex;align-items:center;background:#071611d9;
- border:1px solid #46654e;border-radius:9px;padding:7px 10px;color:#d9f6d2;font-size:11px;line-height:1.4}
+ border:1px solid #46654e;border-radius:9px;padding:7px 10px;color:#d9f6d2;font-size:11px;line-height:1.4;gap:8px}
+.camera-stage-coverage{flex:none;padding:3px 7px;border:1px solid #62844c;border-radius:8px;color:#d9f6a8;
+ background:#152719;font:700 10px/1.3 ui-monospace,monospace;white-space:nowrap}
+.camera-stage-coverage[data-complete="true"]{border-color:#bff17b;background:#284222;color:#efffc6}
 .camera-stage-ui__actions{pointer-events:auto;display:flex;gap:6px;align-items:center;justify-content:flex-end}
 .camera-detection-overlay{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;
  pointer-events:none;z-index:5}
 .camera-detection-box{fill:#bff17b1c;stroke:#c8f56f;stroke-width:3;filter:drop-shadow(0 0 6px #000c)}
+.camera-detection-box--seen{fill:#bff17b30;stroke:#d9ff8a;stroke-width:4}
+.camera-detection-check{fill:#0b1716;stroke:#d9ff8a;stroke-width:2px;paint-order:stroke;
+ text-anchor:middle;font-weight:900;pointer-events:none}
 /* Keep existing lens controls visible in normal and fullscreen mode. */
 body.oil-app .camera-card .camera-preview-overlay{z-index:10!important;padding-bottom:78px!important}
 body.oil-app .camera-card .camera-hint{z-index:2!important}

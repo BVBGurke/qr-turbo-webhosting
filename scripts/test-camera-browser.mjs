@@ -89,12 +89,19 @@ async function test(viewport){
   // A real detected QR would send this corner geometry from the decoder.
   await page.evaluate(()=>{
     const v=document.getElementById('video');
-    window.dispatchEvent(new CustomEvent('qr-turbo:scan-hit',{detail:{hits:[{
-      corners:[{x:20,y:20},{x:60,y:20},{x:60,y:60},{x:20,y:60}],
-      videoWidth:v.videoWidth,videoHeight:v.videoHeight
-    }]}}));
+    const makeHit=(x,y)=>({
+      corners:[{x,y},{x:x+40,y},{x:x+40,y:y+40},{x,y:y+40}],
+      videoWidth:v.videoWidth,videoHeight:v.videoHeight,layoutCodes:4,sessionId:72
+    });
+    window.dispatchEvent(new CustomEvent('qr-turbo:scan-hit',{
+      detail:{hits:[makeHit(20,20),makeHit(v.videoWidth-60,v.videoHeight-60)]}
+    }));
   });
-  assert.equal(await page.locator('#cameraDetectionOverlay polygon').count(),1);
+  await page.waitForFunction(()=>document.querySelectorAll('#cameraDetectionOverlay [data-qr-slot]').length===2);
+  assert.equal(await page.locator('#cameraQrCoverage').innerText(),'QR 2/4 scanned');
+  await page.waitForTimeout(1250);
+  assert.equal(await page.locator('#cameraDetectionOverlay polygon[data-qr-slot]').count(),2,
+    'Previously scanned QR markers remain visible');
   await page.locator('#cameraAdvancedBtn').click();
   await page.evaluate(()=>window.QRTurboCamera.listCameras());
   const mapper=page.locator('.camera-map-entry select').first();
@@ -175,6 +182,10 @@ async function test(viewport){
       await page.waitForFunction(()=>document.getElementById('fileName')?.textContent==='qr-scan-smoke.txt',
         {timeout:20000});
       assert.match(await page.locator('#status').innerText(),/received|complete/i);
+      await page.waitForFunction(()=>document.querySelectorAll('#cameraDetectionOverlay polygon[data-qr-slot]').length>0,
+        null,{timeout:5000});
+      assert.match(await page.locator('#cameraQrCoverage').innerText(),
+        new RegExp('^QR \\d+/'+receiverLayout+' scanned$'));
       console.log('PASS: end-to-end QR layout '+senderLayout+' → '+receiverLayout+' at '+rotation+'°.');
     }
   }
@@ -240,7 +251,7 @@ async function testScreen(){
 try{
   await ready();
   browser=await chromium.launch({
-    headless:true,channel:'chrome',
+    headless:true,channel:process.env.BROWSER_CHANNEL||'chrome',
     args:['--no-sandbox','--use-fake-ui-for-media-stream','--use-fake-device-for-media-stream',
       '--disable-dev-shm-usage']
   });

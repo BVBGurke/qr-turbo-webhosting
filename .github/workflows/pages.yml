@@ -20,7 +20,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: npm run test && npm run build && npm run test:dist
+      - name: Build and verify production bundle
+        run: npm ci && npm run test && npm run build && npm run test:dist && npm run test:camera
       - name: Check whether GitHub Pages is configured
         id: pages_check
         env:

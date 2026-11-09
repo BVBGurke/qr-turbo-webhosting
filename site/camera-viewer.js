@@ -17,8 +17,10 @@
  video.setAttribute('playsinline','');
  video.setAttribute('autoplay','');
  video.muted=true;
- let cssFullscreen=false,scanHits=0,lastHit=0,renderFrameCount=0,lastFpsAt=0,actualFps=0,
-   screenshot=null,rafId=0,readingFrames=false;
+ let cssFullscreen=false,scanHits=0,renderFrameCount=0,lastFpsAt=0,actualFps=0,
+   screenshot=null,rafId=0,readingFrames=false,coverageTotal=1,currentSession=null,qrRenderFrame=0;
+ let overlayWidth=0,overlayHeight=0;
+ const scannedSlots=new Map(),pendingQrHits=[];
  const nativeFullscreen=()=>document.fullscreenElement===stage ||
    document.webkitFullscreenElement===stage;
  const fullscreen=()=>nativeFullscreen()||cssFullscreen;
@@ -47,7 +49,9 @@
  const bottom=elt('div','camera-stage-ui__bottom');
  const liveStats=elt('div','camera-stage-ui__stats');
  const statText=elt('span','', 'Noch keine QR-Daten');
- liveStats.append(statText);
+ const coverageText=elt('span','camera-stage-coverage','QR 0/1 scanned');
+ coverageText.id='cameraQrCoverage';coverageText.setAttribute('role','status');coverageText.setAttribute('aria-live','polite');
+ liveStats.append(statText,coverageText);
  const actions=elt('div','camera-stage-ui__actions');
  const actionStart=button('cameraOverlayStart','Start or stop the QR scanner','Scan starten');
  const actionFlip=button('cameraOverlayFlip','Switch between front and rear camera','⇄');
@@ -92,9 +96,8 @@
   statText.textContent=(progress&&progress!=='0%'?progress+' · ':'')+
     (text.slice(0,105)||'Warte auf QR-Signal')+
     (scanHits?' · Treffer: '+scanHits:'');
-  if(lastHit&&performance.now()-lastHit>1100){
-   overlay.replaceChildren();lastHit=0;
-  }
+  coverageText.textContent='QR '+scannedSlots.size+'/'+coverageTotal+' scanned';
+  coverageText.dataset.complete=String(scannedSlots.size>=coverageTotal);
   syncActions();
  }
  async function enterFullscreen(){
@@ -140,7 +143,12 @@
  actionFlip.addEventListener('click',()=>document.getElementById('cameraFlip')?.click());
  actionFocus.addEventListener('click',()=>document.getElementById('cameraRefocus')?.click());
  actionTorch.addEventListener('click',()=>document.getElementById('cameraTorch')?.click());
- start.addEventListener('click',()=>{scanHits=0;lastHit=0;overlay.replaceChildren();});
+ function resetCoverage(){
+  scanHits=0;coverageTotal=1;currentSession=null;scannedSlots.clear();pendingQrHits.length=0;
+  overlayWidth=video.videoWidth||0;overlayHeight=video.videoHeight||0;
+  overlay.replaceChildren();coverageText.textContent='QR 0/1 scanned';coverageText.dataset.complete='false';
+ }
+ start.addEventListener('click',resetCoverage);
  function fromVideoCoords(hit){
   const w=Number(hit.videoWidth)||video.videoWidth,h=Number(hit.videoHeight)||video.videoHeight;
   if(!(w>0&&h>0)||!Array.isArray(hit.corners)||hit.corners.length<3)return null;
@@ -148,25 +156,68 @@
   if(path.length<3)return null;
   return {w,h,path};
  }
- let lastOverlayAt=0;
- window.addEventListener('qr-turbo:scan-hit',e=>{
-  const data=e.detail||{},hits=Array.isArray(data.hits)?data.hits:[];
-  if(!hits.length)return;
-  scanHits+=hits.length;lastHit=performance.now();
-  if(lastHit-lastOverlayAt<90)return;
-  lastOverlayAt=lastHit;
-  const w=video.videoWidth,h=video.videoHeight;
-  if(!(w>0&&h>0))return;
+ function qrSlot(hit,points,layout){
+  if((layout===8||layout===16)&&Number.isInteger(Number(hit.tileIndex)))return layout+':'+Number(hit.tileIndex);
+  if(layout===4){
+   const centerX=points.path.reduce((sum,p)=>sum+p.x,0)/points.path.length;
+   const centerY=points.path.reduce((sum,p)=>sum+p.y,0)/points.path.length;
+   return '4:'+((centerY>=points.h/2?2:0)+(centerX>=points.w/2?1:0));
+  }
+  return layout+':0';
+ }
+ function renderScannedSlots(){
+  const w=video.videoWidth||overlayWidth,h=video.videoHeight||overlayHeight;
+  if(!(w>0&&h>0)){
+   coverageText.textContent='QR '+scannedSlots.size+'/'+coverageTotal+' scanned';
+   coverageText.dataset.complete=String(scannedSlots.size>=coverageTotal);
+   return;
+  }
+  overlayWidth=w;overlayHeight=h;
   overlay.setAttribute('viewBox','0 0 '+w+' '+h);
   overlay.replaceChildren();
-  for(const hit of hits.slice(0,16)){
+  for(const [slot,hit] of scannedSlots){
    const p=fromVideoCoords(hit);if(!p)continue;
    const polygon=document.createElementNS('http://www.w3.org/2000/svg','polygon');
    polygon.setAttribute('points',p.path.map(pt=>pt.x+','+pt.y).join(' '));
-   polygon.setAttribute('class','camera-detection-box');
+   polygon.setAttribute('class','camera-detection-box camera-detection-box--seen');
+   polygon.setAttribute('data-qr-slot',slot);
    polygon.setAttribute('vector-effect','non-scaling-stroke');
    overlay.append(polygon);
+   const centerX=p.path.reduce((sum,point)=>sum+point.x,0)/p.path.length;
+   const centerY=p.path.reduce((sum,point)=>sum+point.y,0)/p.path.length;
+   const size=Math.max(14,Math.min(32,Math.min(p.w,p.h)*.32));
+   const check=document.createElementNS('http://www.w3.org/2000/svg','text');
+   check.setAttribute('x',String(centerX));check.setAttribute('y',String(centerY+size*.34));
+   check.setAttribute('font-size',String(size));check.setAttribute('class','camera-detection-check');
+   check.textContent='✓';overlay.append(check);
   }
+  coverageText.textContent='QR '+scannedSlots.size+'/'+coverageTotal+' scanned';
+  coverageText.dataset.complete=String(scannedSlots.size>=coverageTotal);
+ }
+ function queueQrHits(hits){
+  pendingQrHits.push(...hits);
+  if(qrRenderFrame)return;
+  qrRenderFrame=requestAnimationFrame(()=>{
+   qrRenderFrame=0;
+   for(const hit of pendingQrHits.splice(0)){
+    const p=fromVideoCoords(hit);if(!p)continue;
+    const layout=[1,4,8,16].includes(Number(hit.layoutCodes))?Number(hit.layoutCodes):1;
+      overlayWidth=Number(hit.videoWidth)||overlayWidth||video.videoWidth||0;
+      overlayHeight=Number(hit.videoHeight)||overlayHeight||video.videoHeight||0;
+    const session=String(hit.sessionId??'unknown')+':'+layout;
+    if(currentSession!==session){
+     scannedSlots.clear();scanHits=0;currentSession=session;coverageTotal=layout;
+    }
+    coverageTotal=layout;scanHits++;
+    scannedSlots.set(qrSlot(hit,p,layout),hit);
+   }
+   renderScannedSlots();updateDetails();
+  });
+ }
+ window.addEventListener('qr-turbo:scan-hit',e=>{
+  const data=e.detail||{},hits=Array.isArray(data.hits)?data.hits:[];
+  if(!hits.length)return;
+  queueQrHits(hits);
  });
  let frameObserverActive=false;
  function countCameraFrames(){
@@ -195,6 +246,7 @@
   enter:enterFullscreen,exit:exitFullscreen,
   get active(){return fullscreen();},
   get lastFps(){return actualFps;},
-  get hits(){return scanHits;}
+  get hits(){return scanHits;},
+  get coverage(){return {scanned:scannedSlots.size,total:coverageTotal};}
  };
 })();
