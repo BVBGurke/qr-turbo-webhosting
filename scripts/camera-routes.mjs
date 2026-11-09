@@ -15,6 +15,12 @@ function enhanceReceiverApp(source){
     'if (!androidCam && previewFpsCap >= 60) {',
     'if (window.QRTurboCamera?.preferHighFps === true && !androidCam && previewFpsCap >= 60) {',
     'experimental 120 FPS preflight');
+  // Stable default for camera scanning; users can choose 60 FPS in Advanced.
+  // At higher exposure times the phone captures sharper, less noisy QR modules.
+  source=replaceOnce(source,
+    '  let previewFps = 60;',
+    '  let previewFps = 30;',
+    'stable 30 FPS camera preview');
   source=replaceOnce(source,
     'video: { ...camera, frameRate: { ideal: 120 } },',
     'video: window.QRTurboCamera?.constraints({ ...camera, frameRate: { ideal: 120 } }) || { ...camera, frameRate: { ideal: 120 } },',
