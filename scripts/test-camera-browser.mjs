@@ -116,12 +116,110 @@ async function test(viewport){
     stage:document.querySelector('.camera-card')?.getBoundingClientRect()?.width
   }));
   assert.ok(docWidth.scroll-docWidth.client<10,'Camera page horizontally overflows: '+JSON.stringify(docWidth));
-  await page.locator('#stopBtn').click();
-  await page.waitForFunction(()=>!window.QRTurboCameraBridge.isRunning(),{timeout:5000});
+  if(viewport.width>=650){
+    for(const [senderLayout,receiverLayout] of [['single','1'],['quad','4'],['octa','8'],['hexadeca','16']]){
+      const sender=await ctx.newPage();
+      await sender.goto(origin+'/send/',{waitUntil:'load'});
+      await sender.evaluate(()=>{
+        const settings=document.getElementById('liveAdvancedSettings');
+        if(settings)settings.open=true;
+        const input=document.getElementById('fileInput');
+        const file=new File(['QR scanner end-to-end regression'],'qr-scan-smoke.txt',{type:'text/plain'});
+        const transfer=new DataTransfer();transfer.items.add(file);
+        input.files=transfer.files;input.dispatchEvent(new Event('change',{bubbles:true}));
+      });
+      await sender.locator('#qrMode').selectOption(senderLayout);
+      await sender.locator('#chunkSize').selectOption('1003');
+      await sender.getByRole('button',{name:'Prepare QR stream'}).click();
+      await sender.waitForFunction(()=>!document.getElementById('playBtn')?.disabled,null,{timeout:15000});
+      await sender.locator('#playBtn').evaluate(button=>button.click());
+      const frame=await sender.locator('#qrCanvas').evaluate(canvas=>canvas.toDataURL('image/png'));
+      await sender.close();
+
+      if(await page.evaluate(()=>window.QRTurboCameraBridge.isRunning()))
+        await page.locator('#stopBtn').click();
+      await page.locator('#resetBtn').click();
+      await page.locator('#cameraAdvancedBtn').click();
+      await page.locator('#turboGridMode').selectOption(receiverLayout);
+      await page.locator('#cameraSimpleBtn').click();
+      await page.evaluate(async dataUrl=>{
+        const image=new Image();image.src=dataUrl;
+        await new Promise((resolve,reject)=>{image.onload=resolve;image.onerror=reject;});
+        const canvas=document.createElement('canvas');
+        canvas.width=image.naturalWidth;canvas.height=image.naturalHeight;
+        canvas.getContext('2d').drawImage(image,0,0);
+        const stream=canvas.captureStream(30);
+        Object.defineProperty(navigator.mediaDevices,'getUserMedia',{
+          configurable:true,value:async()=>stream
+        });
+        window.__qrCameraTestStream=stream;
+      },frame);
+      await page.locator('#startBtn').click();
+      await page.waitForFunction(()=>window.QRTurboCameraBridge?.isRunning()&&
+        document.getElementById('video')?.readyState>=2,{timeout:15000});
+      await page.waitForFunction(()=>document.getElementById('fileName')?.textContent==='qr-scan-smoke.txt',
+        {timeout:20000});
+      assert.match(await page.locator('#status').innerText(),/received|complete/i);
+      console.log('PASS: end-to-end QR layout '+senderLayout+' → '+receiverLayout+'.');
+    }
+  }
+  if(await page.evaluate(()=>window.QRTurboCameraBridge.isRunning())){
+    await page.locator('#stopBtn').click();
+    await page.waitForFunction(()=>!window.QRTurboCameraBridge.isRunning(),{timeout:5000});
+  }
   assert.equal(errors.length,0,'Uncaught camera errors: '+errors.join('; '));
   console.log(JSON.stringify({viewport,permission:'granted',stream:'started/stopped',cameras:capabilities.cameras,
     zoomSupported:!capabilities.zoomDisabled,torchSupported:!capabilities.torchDisabled,
     scrollWidth:docWidth.scroll,clientWidth:docWidth.client,jsErrors:errors}));
+  await ctx.close();
+}
+async function testScreen(){
+  const ctx=await browser.newContext({viewport:{width:1280,height:850}});
+  const page=await ctx.newPage(),errors=[];
+  page.on('pageerror',error=>errors.push(String(error)));
+  await page.goto(origin+'/screen/',{waitUntil:'load'});
+  const sender=await ctx.newPage();
+  await sender.goto(origin+'/send/',{waitUntil:'load'});
+  await sender.evaluate(()=>{
+    const settings=document.getElementById('liveAdvancedSettings');
+    if(settings)settings.open=true;
+    const input=document.getElementById('fileInput');
+    const file=new File(['QR screen capture end-to-end regression'],'screen-scan-smoke.txt',{type:'text/plain'});
+    const transfer=new DataTransfer();transfer.items.add(file);
+    input.files=transfer.files;input.dispatchEvent(new Event('change',{bubbles:true}));
+  });
+  await sender.locator('#qrMode').selectOption('octa');
+  await sender.locator('#chunkSize').selectOption('1003');
+  await sender.getByRole('button',{name:'Prepare QR stream'}).click();
+  await sender.waitForFunction(()=>!document.getElementById('playBtn')?.disabled,null,{timeout:15000});
+  await sender.locator('#playBtn').evaluate(button=>button.click());
+  const frame=await sender.locator('#qrCanvas').evaluate(canvas=>canvas.toDataURL('image/png'));
+  await sender.close();
+  await page.locator('#turboGridMode').selectOption('8');
+  await page.evaluate(async dataUrl=>{
+    const image=new Image();image.src=dataUrl;
+    await new Promise((resolve,reject)=>{image.onload=resolve;image.onerror=reject;});
+    const canvas=document.createElement('canvas');
+    canvas.width=image.naturalWidth;canvas.height=image.naturalHeight;
+    canvas.getContext('2d').drawImage(image,0,0);
+    const stream=canvas.captureStream(30);
+    Object.defineProperty(navigator.mediaDevices,'getDisplayMedia',{
+      configurable:true,value:async()=>stream
+    });
+  },frame);
+    const startHit=await page.locator('#startBtn').evaluate(button=>{
+      const rect=button.getBoundingClientRect();
+      return document.elementFromPoint(rect.x+rect.width/2,rect.y+rect.height/2)?.id;
+    });
+    assert.equal(startHit,'startBtn','Screen start control must not be covered by the preview.');
+  await page.locator('#startBtn').click();
+  await page.waitForFunction(()=>!document.getElementById('stopBtn')?.disabled&&
+    document.getElementById('video')?.readyState>=2,{timeout:15000});
+  await page.waitForFunction(()=>document.getElementById('fileName')?.textContent==='screen-scan-smoke.txt',
+    {timeout:20000});
+  assert.match(await page.locator('#status').innerText(),/received|complete/i);
+  assert.equal(errors.length,0,'Uncaught screen receiver errors: '+errors.join('; '));
+  console.log('PASS: end-to-end 8-QR screen capture transfer.');
   await ctx.close();
 }
 try{
@@ -133,6 +231,7 @@ try{
   });
   await test({width:1280,height:850});
   await test({width:390,height:844});
+  await testScreen();
   console.log('PASS: Camera Studio Simple/Advanced, device roles, permissions, start/stop, lens switch, mobile sizing.');
 }catch(e){console.error('CAMERA E2E FAILED:',e.stack||e);process.exitCode=1;}
 finally{await browser?.close().catch(()=>{});server.kill('SIGTERM');}

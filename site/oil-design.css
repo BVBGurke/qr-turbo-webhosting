@@ -93,6 +93,7 @@ body.oil-app main.app .actions{display:flex!important;flex-wrap:wrap;gap:9px!imp
 body.oil-app main.app .actions button{min-width:106px}
 body.oil-app main.app .actions .fps-switch{margin-left:auto}
 body.oil-app main.app .camera-card{min-height:320px;max-height:65dvh;aspect-ratio:16/9;background:#06130f!important;display:flex!important;justify-content:center;align-items:center}
+@media(min-width:900px){body.oil-app main.app:has(#openSender) .camera-card{max-height:none;aspect-ratio:auto}}
 body.oil-app main.app .camera-card video{display:block;max-width:100%;max-height:100%;object-fit:contain}
 body.oil-app main.app .stats{margin-top:13px!important;display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:8px!important;padding:14px!important}
 body.oil-app main.app .stats>div{min-width:0;padding:9px!important}
