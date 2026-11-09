@@ -100,6 +100,7 @@ export function addVideoRoutes(output) {
         <option value="fast">Faster · larger video</option>
         <option value="grid8">Turbo V2 · 8 QR codes</option>
         <option value="grid16">Extreme · 16 QR codes</option>
+        <option value="grid16x120">Overdrive · 16 QR / 120 FPS</option>
         <option value="custom">Custom · choose layout / FPS</option>
       </select></label>
       <label>Video duration<select id="exportDuration">
@@ -108,9 +109,9 @@ export function addVideoRoutes(output) {
       </select></label>
     </div>
     <div class="video-field-grid" id="exportCustomSettings" hidden>
-      <label>QR code layout<select id="exportLayout"><option value="quad" selected>Four QR codes</option><option value="octa">Eight QR codes · V2</option><option value="hexadeca">Sixteen QR codes · V2</option><option value="single">One QR code</option></select></label>
+      <label>QR code layout<select id="exportLayout"><option value="quad" selected>Four QR codes</option><option value="octa">Eight QR codes · V2</option><option value="hexadeca">Sixteen QR codes · V2</option><option value="dual">Two QR codes</option><option value="single">One QR code</option></select></label>
       <label>QR video frame rate<select id="exportFPS"><option value="10">10 FPS</option><option value="12">12 FPS</option><option value="15">15 FPS</option><option value="20">20 FPS</option><option value="24">24 FPS</option><option value="30" selected>30 FPS</option><option value="50">50 FPS</option><option value="60">60 FPS</option><option value="90">90 FPS</option><option value="120">120 FPS · experimental</option></select></label>
-      <label>Payload per QR code<select id="exportPayload"><option value="1003">1003 bytes</option><option value="1273">1273 bytes</option><option value="1465" selected>1465 bytes</option><option value="1732">1732 bytes</option><option value="1952">1952 bytes</option><option value="2068">2068 bytes</option></select></label>
+      <label>Payload per QR code<select id="exportPayload"><option value="1003">1003 bytes</option><option value="1273">1273 bytes</option><option value="1465" selected>1465 bytes</option><option value="1732">1732 bytes</option><option value="1952">1952 bytes</option><option value="2068">2068 bytes</option><option value="2331">2331 bytes · single only</option><option value="2953">2953 bytes · single only</option></select></label>
       <p class="video-warning">Turbo V2: 8 and 16 QR codes are supported. At 90/120 FPS, only four tiles change per video frame. Use high-resolution video, a capable decoder, and enough device memory. Test the result in Import Video.</p>
     </div>
     <details class="video-settings"><summary>Advanced compression</summary>
@@ -119,10 +120,16 @@ export function addVideoRoutes(output) {
         <label>Video bitrate (kbps)<input id="exportBitrate" type="number" min="160" max="16000" step="20" value="700" inputmode="numeric"></label>
       </div><p class="video-warning">Too few pixels or a low bitrate can make QR codes unreadable. Smallest is experimental. Some messaging services recompress videos.</p>
     </details>
+    <fieldset class="video-encoder-panel" id="exportEngineSettings">
+      <legend>Export engine</legend>
+      <label class="video-check"><input type="checkbox" id="exportUseGPU" checked> Prefer GPU video encoding</label>
+      <label class="video-check"><input type="checkbox" id="exportHeadless" checked> Headless mode · skip live preview for speed</label>
+      <p class="video-engine-note" id="exportEngineInfo">WebCodecs runs locally. The browser chooses actual hardware; switching GPU off requests software encoding. All engine settings lock during export.</p>
+    </fieldset>
     <div class="video-preview-controls" role="group" aria-label="Export playback preview">
       <div class="video-preview-title"><span class="video-preview-indicator" aria-hidden="true"></span><strong>QR playback preview</strong><span class="video-preview-state" id="exportPreviewState">Ready</span></div>
-      <label class="video-check"><input type="checkbox" id="exportPreview" checked> Show preview</label>
-      <button type="button" class="video-preview-toggle" id="exportTogglePreview" aria-pressed="true">Hide preview</button>
+      <label class="video-check"><input type="checkbox" id="exportPreview"> Show preview</label>
+      <button type="button" class="video-preview-toggle" id="exportTogglePreview" aria-pressed="false">Show preview</button>
     </div>
     <div class="encoded-preview-stage" id="encodedPreviewStage"><canvas id="exportEncodedPreview" width="340" height="340" aria-label="Exact QR video frame preview"></canvas><span id="exportPreviewPlaceholder">Select a file to see the encoded video frames</span></div>
     <div class="video-buttons"><button type="button" id="exportRecord">Create and download video</button><button type="button" id="exportStop" disabled>Cancel generation</button></div>
@@ -157,7 +164,7 @@ export function addVideoRoutes(output) {
       
       <label class="video-check"><input type="checkbox" id="videoLoop" checked> Loop for missed QR frames</label>
       <label class="video-speed-control">Analysis speed<select id="videoImportSpeed">
-        <option value="0.5">0.5× · for high-FPS videos</option>
+        <option value="0.1">0.1× · extra thorough</option><option value="0.25">0.25× · 120 FPS video</option><option value="0.5">0.5× · for high-FPS videos</option>
         <option value="1" selected>1× · normal</option>
         <option value="2">2× · fast (may skip codes)</option>
       </select></label>

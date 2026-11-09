@@ -118,3 +118,15 @@ body .camera-card{min-height:260px}
 .video-export-page .encoded-preview-stage.preview-hidden canvas,.video-export-page .encoded-preview-stage.preview-hidden>span{visibility:hidden;}
 .video-export-page #exportEstimatedSize{font-size:12px;color:#b2d5e2;font-variant-numeric:tabular-nums;}
 @media(max-width:730px){.video-export-page .video-tool-panel{padding:13px;}.video-export-page .shell>.viewer{height:min(88vw,540px)!important;min-height:280px!important;}}
+
+/* Offline encoding engine: compact, keyboard and mobile friendly. */
+.video-export-page .video-encoder-panel{margin:17px 0 13px;padding:15px 16px 8px;border:1px solid #53795d;background:#152920;border-radius:13px;min-width:0}
+.video-export-page .video-encoder-panel legend{padding:0 7px;color:#d4f5bb;font-size:13px;font-weight:750}
+.video-export-page .video-encoder-panel .video-check{min-height:36px;font-weight:650;line-height:1.4;margin:0 0 9px}
+.video-export-page .video-encoder-panel .video-engine-note{font-size:11px;line-height:1.65;color:#a9c7b1;margin:8px 0 5px}
+.video-export-page .video-encoder-panel input:disabled{opacity:.6}
+.video-export-page .video-encoder-panel.is-locked{border-color:#61736b;opacity:.88}
+.video-export-page #exportEncodedPreview{max-width:100%;width: min(100%,420px);height:auto;aspect-ratio:auto}
+.video-export-page .encoded-preview-stage.preview-hidden{min-height:62px}
+.video-export-page .encoded-preview-stage.preview-hidden:after{content:"Headless export · QR frames are generated offscreen";background:#111f1a;color:#d5f9c8}
+@media(max-width:650px){.video-export-page .video-encoder-panel{padding:12px 13px 7px}.video-export-page .video-encoder-panel .video-check{font-size:12px}}

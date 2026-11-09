@@ -47,7 +47,8 @@
   visibility.addEventListener('change',showPreview);
   showPreview();
   function applySpeed() {
-    const speed = Number(speedSelect?.value) || 1;
+    // Slowing playback lets the WASM scanner process more distinct frames of a 120-FPS QR video.
+    const speed = Math.max(0.1,Math.min(2,Number(speedSelect?.value)||1));
     video.playbackRate = speed;
     if (active) log('Analysis playback rate: ' + speed + '×');
   }

@@ -104,6 +104,15 @@ export function addTurboGrid(output) {
   patch(sender,'</script>\n  <script>(() => {\n  const H = window.AirFerryHighSpeed;',
     '</script>\n  <script src="../turbo-protocol.js"></script>\n  <script>(() => {\n  const H = window.AirFerryHighSpeed;');
   for(const [before,after] of senderEdits) patch(sender,before,after);
+  // Explicit universal FPS selection in Advanced settings, including 16 QR / 120 FPS.
+  // QR payloads above 2068 bytes remain single-code only: multi-tile decoding is denser.
+  patch(sender,'  const HIGH_QUEUE_LIMIT = 8;', [
+    '  const ALL_FPS = [10,12,15,20,24,30,50,60,90,120].map(n=>[String(n),n+" FPS"+(n>60?" · experimental":"")]);',
+    '  const MULTI_PAYLOADS = [1003,1273,1465,1732,1952,2068].map(n=>[String(n),n+" B"+(n>1465?" · dense":"")]);',
+    '  const SINGLE_PAYLOADS = [...MULTI_PAYLOADS,["2331","2331 B"],["2953","2953 B"]];',
+    '  for(const name of ["single","dual","quad","octa","hexadeca"]){FPS_CHOICES[name]=ALL_FPS;CHUNK_CHOICES[name]=name==="single"?SINGLE_PAYLOADS:MULTI_PAYLOADS;}',
+    '  const HIGH_QUEUE_LIMIT = 8;'
+  ].join("\\n").replaceAll("\\n","\\n"));
   patch(sender,'<section class="control-card"', '<section class="turbo-presets" aria-label="Performance profiles"><div class="turbo-presets-heading"><b>TRANSMISSION PROFILES</b><span>Tap a preset or customize below</span></div><div class="turbo-presets-grid"><button type="button" data-turbo-profile="safe">Reliable · 1 QR</button><button type="button" data-turbo-profile="quad">Balanced · 4 QR</button><button type="button" data-turbo-profile="octa">Turbo · 8 QR</button><button type="button" data-turbo-profile="hexadeca">Extreme · 16 QR</button><button type="button" data-turbo-profile="overdrive">Overdrive · 16 QR / 120 FPS</button></div><p id="turboProfileInfo" class="turbo-profile-info" role="status">Larger QR grids work best with high-resolution displays and screen capture.</p></section><section class="control-card"');
   for(const route of ['send','receive','screen','import']){
     const html=join(output,route,'index.html');
