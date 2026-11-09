@@ -14,6 +14,7 @@ import { improveOilUI } from './oil-routes.mjs';
 import { addOfflineSenderHooks } from './offline-sender.mjs';
 import { addTurboGrid } from './turbo-grid.mjs';
 import { addTurboGridReceivers } from './turbo-grid-receiver.mjs';
+import { addCameraStudio } from './camera-routes.mjs';
 import { removeFixedTransferCaps } from './size-limits.mjs';
 
 const project = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -149,6 +150,7 @@ try {
   addTurboGrid(output);
   addTurboGridReceivers(output);
   improveOilUI(output);
+  addCameraStudio(output);
   // Transfer previews share one implementation across sender, receivers and video import.
   for (const route of ['send','receive','screen','import']) {
     const page = join(output, route, 'index.html');

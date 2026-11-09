@@ -48,3 +48,7 @@ body.oil-app main.app .camera-card video{object-fit:contain!important}
 body.oil-app #cameraTorch:disabled,body.oil-app #cameraRefocus:disabled{opacity:.45!important}
 @media(max-width:620px){.camera-studio{margin:9px 0 12px;padding:12px;gap:11px}.camera-studio__header{align-items:stretch}.camera-studio__header strong{font-size:15px}.camera-mode-tabs{margin-left:auto}.camera-camera-row{grid-template-columns:minmax(0,1fr) 44px}.camera-camera-row #cameraRefreshDevices{display:none}.camera-studio .camera-field{grid-column:1}.camera-preview-overlay{padding:10px 7px}.camera-lens-buttons{padding:4px}.camera-viewfinder-hint{font-size:10px;max-width:91%}.camera-advanced{padding:13px}.camera-focus-marker{width:50px;height:50px}body.oil-app main.app .camera-card{min-height:50dvh;max-height:65dvh;aspect-ratio:4/3}}
 @media(prefers-reduced-motion:reduce){.camera-focus-pulse{animation:none}}
+
+body.oil-app #cameraAdvancedFps{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+body.oil-app #cameraAdvancedFps .turbo-grid-picker{flex:1 1 240px}
+body.oil-app #cameraAdvancedFps .fps-switch{margin:0!important}

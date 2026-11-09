@@ -287,6 +287,12 @@
     torchOn=false;torch.setAttribute('aria-pressed','false');torch.textContent='Flashlight';
     note('Camera controls reset.');
   });
+  // The scanner's existing FPS and grid controls retain their original IDs.
+  const advancedFps=$('cameraAdvancedFps');
+  for(const selector of ['.turbo-grid-picker','.fps-switch']){
+    const el=document.querySelector('main.app > .actions '+selector);
+    if(el&&advancedFps)advancedFps.append(el);
+  }
   navigator.mediaDevices?.addEventListener?.('devicechange',()=>void listCameras());
   function constraints(base){
     const c={...base};
