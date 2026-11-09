@@ -79,7 +79,7 @@ export function addCameraStudio(dist) {
     '<label class="camera-highfps"><input id="cameraExperimental120" type="checkbox">'+
     'Try 120 FPS capture (experimental; quality may drop)</label>'+
     '      <div id="cameraAdvancedFps"', 'capture quality options');
-  html=replaceOnce(html,'      <div id="cameraAdvancedFps"'
+  html=replaceOnce(html,'      <div id="cameraAdvancedFps"',
     '<label class="camera-auto-exposure"><input type="checkbox" id="cameraAutoExposure" disabled>'+
     'Automatic exposure assist (when hardware supports it)</label>'+
     '      <div id="cameraAdvancedFps"','auto exposure opt in');
