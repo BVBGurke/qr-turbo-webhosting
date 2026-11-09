@@ -143,10 +143,11 @@
  actionFlip.addEventListener('click',()=>document.getElementById('cameraFlip')?.click());
  actionFocus.addEventListener('click',()=>document.getElementById('cameraRefocus')?.click());
  actionTorch.addEventListener('click',()=>document.getElementById('cameraTorch')?.click());
- function resetCoverage(){
-  scanHits=0;coverageTotal=1;currentSession=null;scannedSlots.clear();pendingQrHits.length=0;
+ function resetCoverage(total=1){
+  scanHits=0;coverageTotal=[1,4,8,16].includes(Number(total))?Number(total):1;
+  currentSession=null;scannedSlots.clear();pendingQrHits.length=0;
   overlayWidth=video.videoWidth||0;overlayHeight=video.videoHeight||0;
-  overlay.replaceChildren();coverageText.textContent='QR 0/1 scanned';coverageText.dataset.complete='false';
+  overlay.replaceChildren();coverageText.textContent='QR 0/'+coverageTotal+' scanned';coverageText.dataset.complete='false';
  }
  start.addEventListener('click',resetCoverage);
  function fromVideoCoords(hit){
@@ -247,6 +248,7 @@
   get active(){return fullscreen();},
   get lastFps(){return actualFps;},
   get hits(){return scanHits;},
-  get coverage(){return {scanned:scannedSlots.size,total:coverageTotal};}
+  get coverage(){return {scanned:scannedSlots.size,total:coverageTotal};},
+  resetCoverage
  };
 })();

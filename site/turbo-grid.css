@@ -12,10 +12,14 @@ body.oil-app .turbo-presets-grid button:last-child{grid-column:span 2;background
 body.oil-app .turbo-presets-grid button:last-child:hover{background:#e1ffaf!important}
 .turbo-profile-info{font-size:11px;line-height:1.6;min-height:2.2em;color:#a8c8ae;margin:0}
 .turbo-grid-picker{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:740;color:#ccdec9;padding:7px 10px;background:#1b3025;border:1px solid #4a664c;border-radius:10px;min-height:44px}
+.turbo-grid-rescan{min-height:40px!important;padding:7px 10px!important;white-space:nowrap}
+.turbo-grid-status{flex:1 1 190px;min-width:170px;color:#b8cdb7;font:11px/1.4 ui-monospace,monospace}
+.turbo-grid-status[data-ready="true"]{color:#d9f6a8}
+.turbo-grid-status[data-error="true"]{color:#ffb4a9}
 body.oil-app .turbo-grid-picker select{width:auto;min-width:136px;max-width:205px;min-height:34px!important;margin:0;padding:5px 25px 5px 8px;background:#10221a!important;color:#f0ffe8!important;border:1px solid #526952!important;font-size:12px}
 body.oil-app .controls .control-card{transition:border-color .18s}
 body.oil-app .turbo-advanced[open]{border-color:#698c69!important}
-@media(max-width:760px){.turbo-presets{padding:12px}.turbo-presets-grid{gap:6px}body.oil-app .turbo-presets-grid button{min-height:49px;font-size:11px;padding:8px 5px}.turbo-grid-picker{width:100%;justify-content:space-between}.turbo-grid-picker select{flex:1;width:auto!important}.oil-app main.app .actions{display:flex!important;flex-wrap:wrap!important}.oil-app main.app .actions .fps-switch{flex:1 1 auto!important;min-width:190px}}
+@media(max-width:760px){.turbo-presets{padding:12px}.turbo-presets-grid{gap:6px}body.oil-app .turbo-presets-grid button{min-height:49px;font-size:11px;padding:8px 5px}.turbo-grid-picker{width:100%;justify-content:space-between}.turbo-grid-picker select{flex:1;width:auto!important}.turbo-grid-rescan{flex:0 0 auto}.turbo-grid-status{flex-basis:100%;min-width:0}.oil-app main.app .actions{display:flex!important;flex-wrap:wrap!important}.oil-app main.app .actions .fps-switch{flex:1 1 auto!important;min-width:190px}}
 @media(prefers-reduced-motion:reduce){body.oil-app .turbo-presets-grid button{transition:none!important}}
 
 /* QR Turbo preset-first hierarchy (Oil UI). Visible above collapsed Advanced settings. */

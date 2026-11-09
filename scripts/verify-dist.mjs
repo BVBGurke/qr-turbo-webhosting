@@ -138,3 +138,15 @@ if(cameraApp.includes('void postHighSpeedRegion(slot,region,1,false,true).then')
    !cameraApp.includes('if(codes.length)highScanMisses=0;')){
   throw new Error('Turbo Grid scanner must handle synchronous bitmap dispatch and worker decode results');
 }
+for(const route of ['receive','screen']){
+  const page=readFileSync(join(dir,route,'index.html'),'utf8');
+  const app=readFileSync(join(dir,route,'app.js'),'utf8');
+  if(!page.includes('id="turboGridRescan"')||!page.includes('id="turboGridStatus"'))
+    throw new Error('Manual QR preflight controls missing: '+route);
+  for(const token of ['turboGridRequested','turboGridSeen','resetTurboGridScan()',
+    'turboGridReady=turboGridSeen.size>=turboGridRequested',
+    'if(noteTurboGridHit(code,origin))acceptDecodedBytes(code.bytes)']){
+    if(!app.includes(token))throw new Error('Manual QR preflight gate missing in '+route+': '+token);
+  }
+}
+console.log('Manual grid calibration, transfer gate and Rescan controls verified for camera and screen receivers.');

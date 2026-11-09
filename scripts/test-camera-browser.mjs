@@ -40,7 +40,8 @@ async function test(viewport){
   const layouts=await page.locator('#turboGridMode option').evaluateAll(nodes=>nodes.map(n=>n.value));
   assert.ok(['auto','1','4','8','16'].every(id=>layouts.includes(id)),'All 1/4/8/16 scan layouts selectable');
   await page.selectOption('#turboGridMode','16');
-  assert.match(await page.locator('#status').innerText(),/16 QR tiles/i);
+  assert.match(await page.locator('#turboGridStatus').innerText(),/0\/16.*waiting/i);
+  assert.equal(await page.locator('#turboGridStatus').getAttribute('data-ready'),'false');
   await page.selectOption('#turboGridMode','auto');
   await page.locator('#cameraSimpleBtn').click();
   assert.equal(await page.locator('#cameraAdvanced').isVisible(),false);
@@ -128,6 +129,7 @@ async function test(viewport){
     for(const [senderLayout,receiverLayout] of [['single','1'],['quad','4'],['octa','8'],['hexadeca','16']]){
       for(const rotation of [0,90,180,270])cases.push([senderLayout,receiverLayout,rotation]);
     }
+    cases.push(['octa','auto',0]);
     for(const [senderLayout,receiverLayout,rotation] of cases){
       const sender=await ctx.newPage();
       await sender.goto(origin+'/send/',{waitUntil:'load'});
@@ -157,35 +159,74 @@ async function test(viewport){
         return rotated.toDataURL('image/png');
       },rotation);
       await sender.close();
+      const preflightCase=senderLayout==='octa'&&receiverLayout==='8'&&rotation===0;
 
       if(await page.evaluate(()=>window.QRTurboCameraBridge.isRunning()))
         await page.locator('#stopBtn').click();
       await page.locator('#resetBtn').click();
       await page.locator('#cameraAdvancedBtn').click();
-      await page.locator('#turboGridMode').selectOption(receiverLayout);
+      await page.locator('#turboGridMode').selectOption(preflightCase?'4':receiverLayout);
       await page.locator('#cameraSimpleBtn').click();
-      await page.evaluate(async dataUrl=>{
+      await page.evaluate(async ({dataUrl,hideLastTile})=>{
         const image=new Image();image.src=dataUrl;
         await new Promise((resolve,reject)=>{image.onload=resolve;image.onerror=reject;});
         const canvas=document.createElement('canvas');
         canvas.width=image.naturalWidth;canvas.height=image.naturalHeight;
-        canvas.getContext('2d').drawImage(image,0,0);
+        const context=canvas.getContext('2d');context.drawImage(image,0,0);
+        if(hideLastTile){
+          context.fillStyle='#fff';
+          context.fillRect(canvas.width*3/4,canvas.height/2,canvas.width/4,canvas.height/2);
+        }
         const stream=canvas.captureStream(30);
+        const testState={canvas,context,image,hideLastTile};
+        window.__qrCameraTest=testState;
+        const drawFrame=()=>{
+          context.drawImage(image,0,0);
+          if(testState.hideLastTile){
+            context.fillStyle='#fff';
+            context.fillRect(canvas.width*3/4,canvas.height/2,canvas.width/4,canvas.height/2);
+          }
+          requestAnimationFrame(drawFrame);
+        };
+        requestAnimationFrame(drawFrame);
         Object.defineProperty(navigator.mediaDevices,'getUserMedia',{
           configurable:true,value:async()=>stream
         });
-        window.__qrCameraTestStream=stream;
-      },frame);
+      },{dataUrl:frame,hideLastTile:preflightCase});
       await page.locator('#startBtn').click();
       await page.waitForFunction(()=>window.QRTurboCameraBridge?.isRunning()&&
         document.getElementById('video')?.readyState>=2,{timeout:15000});
+      if(preflightCase){
+        await page.waitForFunction(()=>document.getElementById('turboGridStatus')?.textContent.includes('Sender uses 8 QR codes; selected 4'),
+          null,{timeout:10000});
+        assert.equal(await page.locator('#fileName').innerText(),'-','A layout mismatch must not start receiving');
+        assert.equal(await page.locator('#progressText').innerText(),'0%');
+        await page.locator('#cameraAdvancedBtn').click();
+        await page.locator('#turboGridMode').selectOption('8');
+        await page.locator('#cameraSimpleBtn').click();
+        await page.waitForFunction(()=>document.getElementById('turboGridStatus')?.textContent.includes('7/8'),
+          null,{timeout:15000});
+        assert.equal(await page.locator('#fileName').innerText(),'-','Transfer must wait until every requested QR slot is found');
+        assert.equal(await page.locator('#progressText').innerText(),'0%');
+        const coverageAfterRescan=await page.locator('#turboGridRescan').evaluate(button=>{
+          button.click();
+          return document.getElementById('cameraQrCoverage').textContent;
+        });
+        assert.equal(coverageAfterRescan,'QR 0/8 scanned');
+        assert.equal(await page.locator('#turboGridStatus').getAttribute('data-ready'),'false');
+        await page.evaluate(()=>{window.__qrCameraTest.hideLastTile=false;});
+        await page.waitForFunction(()=>document.getElementById('turboGridStatus')?.getAttribute('data-ready')==='true',
+          null,{timeout:15000});
+        console.log('PASS: manual 8-grid waits at 7/8; Rescan resets calibration; transfer releases at 8/8.');
+      }
       await page.waitForFunction(()=>document.getElementById('fileName')?.textContent==='qr-scan-smoke.txt',
         {timeout:20000});
-      assert.match(await page.locator('#status').innerText(),/received|complete/i);
+      assert.equal(await page.locator('#result').isVisible(),true,'Recovered file result must be visible');
       await page.waitForFunction(()=>document.querySelectorAll('#cameraDetectionOverlay polygon[data-qr-slot]').length>0,
         null,{timeout:5000});
       assert.match(await page.locator('#cameraQrCoverage').innerText(),
-        new RegExp('^QR \\d+/'+receiverLayout+' scanned$'));
+        new RegExp('^QR \\d+/'+(receiverLayout==='auto'?'8':receiverLayout)+' scanned$'));
+      if(receiverLayout==='auto')assert.equal(await page.locator('#turboGridMode').inputValue(),'auto');
       console.log('PASS: end-to-end QR layout '+senderLayout+' → '+receiverLayout+' at '+rotation+'°.');
     }
   }
