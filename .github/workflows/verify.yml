@@ -9,12 +9,13 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Install FFmpeg for a real video decoding smoke test
+      - name: Install FFmpeg for video validation
         run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
       - name: Check JavaScript source
         run: npm run test
@@ -22,3 +23,7 @@ jobs:
         run: npm run build
       - name: Verify generated video routes
         run: npm run test:dist
+      - name: Install browser test driver
+        run: npm install --no-save --no-package-lock --ignore-scripts playwright-core
+      - name: Browser E2E — actual QR export and WebM decoding
+        run: node scripts/test-browser-export.mjs

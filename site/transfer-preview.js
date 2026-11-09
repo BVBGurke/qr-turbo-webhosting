@@ -194,8 +194,9 @@
     window.addEventListener('qr-turbo:video-error',event=>{
       if(!card)return;
       card.classList.add('transfer-preview--error');
+      const message=String(event.detail?.message||'Unknown export error');
       card.querySelector('.transfer-preview__pending')?.replaceChildren(
-        node('span','','Export stopped. Adjust the settings and try again.'));
+        node('span','','Export failed: '+message));
     });
   }
   function receiverPreview(){
