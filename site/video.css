@@ -101,3 +101,20 @@ body .camera-card{min-height:260px}
  .video-preview-toggle{margin-left:auto}
  .video-import-page .video-tool-panel .camera-card{min-height:190px;height:55vw;max-height:360px}
 }
+
+/* Compact recorder lives under Send. Keep UI vertically scrollable. */
+.video-export-page .shell>.controls{height:auto!important;max-height:none!important;overflow:visible!important;min-width:0!important;}
+.video-export-page .video-tool-panel{margin:14px 0 16px;padding:16px;}
+.video-export-page .video-tool-panel h2{font-size:18px;}
+.video-export-page .video-tool-panel a{color:#90efd5;}
+.video-export-page .video-settings{border:1px solid #315466;border-radius:10px;padding:9px 12px;margin:13px 0;}
+.video-export-page .video-settings>summary{cursor:pointer;color:#cce9df;font-weight:700;}
+.video-export-page .video-settings .video-field-grid{margin-top:12px;}
+.video-export-page .video-warning{color:#f0c894!important;font-size:12px;line-height:1.5;}
+.video-export-page .encoded-preview-stage{position:relative;min-height:145px;display:flex;justify-content:center;align-items:center;background:#080f1c;border:1px solid #325166;border-radius:11px;overflow:hidden;padding:8px;margin:11px 0;}
+.video-export-page #exportEncodedPreview{display:block;width:min(100%,265px);height:auto;image-rendering:pixelated;aspect-ratio:1;}
+.video-export-page .encoded-preview-stage>span{position:absolute;color:#a2b4c8;text-align:center;padding:14px;pointer-events:none;font-size:12px;}
+.video-export-page .encoded-preview-stage.preview-hidden:after{content:"Preview hidden · QR video encoding continues";position:absolute;inset:0;background:#101927;color:#95eccf;display:grid;place-items:center;padding:16px;font-size:13px;text-align:center;pointer-events:none;}
+.video-export-page .encoded-preview-stage.preview-hidden canvas,.video-export-page .encoded-preview-stage.preview-hidden>span{visibility:hidden;}
+.video-export-page #exportEstimatedSize{font-size:12px;color:#b2d5e2;font-variant-numeric:tabular-nums;}
+@media(max-width:730px){.video-export-page .video-tool-panel{padding:13px;}.video-export-page .shell>.viewer{height:min(88vw,540px)!important;min-height:280px!important;}}
