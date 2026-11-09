@@ -117,3 +117,6 @@ for(const token of ['QRTurboCamera?.constraints','QRTurboCamera?.onTrack','QRTur
   if(!cameraApp.includes(token))throw new Error('Missing scanner integration: '+token);
 }
 console.log('Camera Studio wired into live scanner and permission-aware controls.');
+
+if(!cameraPage.includes('id="cameraQualityHint"')||!cameraPage.includes('id="cameraAutoExposure"'))throw new Error('Camera quality feedback UI is missing');
+if(!cameraApp.includes('QRTurboCamera.request({'))throw new Error('Missing fallback camera acquisition');

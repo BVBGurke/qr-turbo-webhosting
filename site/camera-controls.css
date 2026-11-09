@@ -52,3 +52,14 @@ body.oil-app #cameraTorch:disabled,body.oil-app #cameraRefocus:disabled{opacity:
 body.oil-app #cameraAdvancedFps{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
 body.oil-app #cameraAdvancedFps .turbo-grid-picker{flex:1 1 240px}
 body.oil-app #cameraAdvancedFps .fps-switch{margin:0!important}
+
+.camera-quality{display:grid;gap:5px;padding:11px 13px;background:#10241c;border:1px solid #355744;border-radius:12px}
+.camera-quality>div{display:flex;align-items:center;gap:11px;flex-wrap:wrap}
+.camera-quality strong{color:#d1f3a1;font-size:12px}
+.camera-quality strong[data-quality=dark],.camera-quality strong[data-quality=bright]{color:#ffc892}
+.camera-quality strong[data-quality=soft]{color:#f1db99}
+.camera-quality span{font-size:10px;color:#91af9c}
+.camera-quality p{margin:0;color:#abc5b1;font-size:11px;line-height:1.5}
+.camera-auto-exposure{display:flex;gap:9px;align-items:center;color:#d4ebd1;font-size:12px;line-height:1.4}
+.camera-auto-exposure input{width:17px;height:17px;accent-color:#c8f56f}
+.camera-auto-exposure input:disabled{opacity:.45}

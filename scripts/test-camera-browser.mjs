@@ -40,6 +40,13 @@ async function test(viewport){
   await page.locator('#cameraSimpleBtn').click();
   assert.equal(await page.locator('#cameraAdvanced').isVisible(),false);
   // Real browser start: the fake camera still produces a MediaStreamTrack.
+  const fallback=await page.evaluate(async()=>{
+    const stream=await window.QRTurboCamera.request({video:{deviceId:{exact:'qr-turbo-invalid-device'}},audio:false});
+    const active=stream.getVideoTracks()[0].readyState;
+    stream.getTracks().forEach(t=>t.stop());
+    return active;
+  });
+  assert.equal(fallback,'live','Stale camera IDs must recover with another camera');
   await page.locator('#startBtn').click();
   await page.waitForFunction(()=>window.QRTurboCameraBridge?.isRunning() &&
     document.getElementById('video').readyState>=2,{timeout:20000});
@@ -55,6 +62,9 @@ async function test(viewport){
   assert.equal(capabilities.track,'live');
   assert.ok(capabilities.cameras>=1);
   await page.locator('#cameraAdvancedBtn').click();
+  await page.waitForFunction(()=>!document.getElementById('cameraQualityHint')?.textContent.startsWith('Start scanning'),
+    null,{timeout:6000});
+  assert.ok(await page.locator('#cameraQualityHint').isVisible());
   if(capabilities.zoomDisabled)assert.ok(await page.locator('#cameraZoom').isDisabled());
   if(capabilities.torchDisabled)assert.ok(await page.locator('#cameraTorch').isDisabled());
   await page.locator('#cameraFlip').click();

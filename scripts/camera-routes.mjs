@@ -32,12 +32,23 @@ function enhanceReceiverApp(source){
   source=replaceOnce(source,'  startHighSpeedWorkers();\n})();',
     CAMERA_BRIDGE + '\n  startHighSpeedWorkers();\n})();',
     'camera switch bridge');
+  const native='navigator.mediaDevices.getUserMedia({';
+  if(source.split(native).length-1!==3)throw new Error('Expected exactly three camera acquisition sites');
+  source=source.replaceAll(native,'window.QRTurboCamera.request({');
   return source;
 }
 export function addCameraStudio(dist) {
   const htmlFile=join(dist,'receive','index.html');
   let html=readFileSync(htmlFile,'utf8');
   html=replaceOnce(html,'<section class="camera-card">',studio+'<section class="camera-card">','studio UI');
+  html=replaceOnce(html,'    <section id="cameraAdvanced" class="camera-advanced"',
+    '<div class="camera-quality"><div><strong id="cameraQualityLevel" data-quality="idle">Image: waiting</strong>'+
+    '<span>Local image analysis</span></div><p id="cameraQualityHint">Start scanning for local image assessment.</p></div>'+
+    '    <section id="cameraAdvanced" class="camera-advanced"','camera quality hints');
+  html=replaceOnce(html,'      <div id="cameraAdvancedFps"',
+    '<label class="camera-auto-exposure"><input type="checkbox" id="cameraAutoExposure" disabled>'+
+    'Automatic exposure assist (when hardware supports it)</label>'+
+    '      <div id="cameraAdvancedFps"','auto exposure opt in');
   html=replaceOnce(html,'<canvas id="scanCanvas" hidden></canvas>', '<canvas id="scanCanvas" hidden></canvas>'+overlay,'viewfinder toolbar');
   html=replaceOnce(html,'</head>','<link rel="stylesheet" href="../camera-controls.css"></head>','studio styles');
   const regex=/<script src="app\.js(?:\?[^"]*)?"><\/script>/;

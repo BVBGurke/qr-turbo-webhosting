@@ -14,12 +14,14 @@
     exposure=$('cameraExposure'), exposureOutput=$('cameraExposureValue'),
     focus=$('cameraFocusDistance'), focusOutput=$('cameraFocusValue'),
     focusMode=$('cameraFocusMode'), torch=$('cameraTorch'),
+    quality=$('cameraQualityHint'), qualityLevel=$('cameraQualityLevel'),
+    autoExposure=$('cameraAutoExposure'),
     flip=$('cameraFlip'), refocus=$('cameraRefocus'), focusMarker=$('cameraFocusMarker'),
     resolution=$('cameraActualResolution'), capabilitiesInfo=$('cameraCapabilityList');
   let track=null, devices=[], selectedId='', facing='environment', locked=false, torchOn=false,
     caps={}, settings={}, requestSerial=0;
   const knownRoles=[
-    [/ultra[\s-]?wide|ultrawide|0[.,]5x|0[.,]6x|0[.,]7x|wide.?angle|超广角/i,'ultra','Ultra-wide'],
+    [/ultra[\s-]?wide|ultrawide|0[.,]5\s*[x×]|0[.,]6\s*[x×]|超广角/i,'ultra','Ultra-wide'],
     [/telephoto|periscope|optical.?zoom|tele.?camera|长焦/i,'tele','Telephoto'],
     [/macro|微距/i,'macro','Macro'],
     [/front|facing.?front|selfie|facetime|user.?facing|前置/i,'front','Front'],
@@ -121,6 +123,7 @@
       zoomOutput.textContent=Number(zoom.value).toFixed(1)+'×';
     }else{disable(zoom,'This camera does not expose hardware zoom.');zoomOutput.textContent='Unavailable';}
     const expose=hasRange(caps.exposureCompensation);
+    if(autoExposure){autoExposure.disabled=!expose;if(!expose)autoExposure.checked=false;}
     if(expose){
       exposure.min=String(caps.exposureCompensation.min);
       exposure.max=String(caps.exposureCompensation.max);
@@ -186,7 +189,12 @@
       if(target.readyState!=='live')return false;
       try{
         await target.applyConstraints({advanced:[value]});
-        if(target===track){settings=target.getSettings?.()||{};updateCapabilities();note('Camera settings updated.');}
+        const applied=target.getSettings?.()||{};
+        if('torch' in value&&typeof applied.torch==='boolean'&&applied.torch!==value.torch){
+          if(target===track)note('Camera ignored the torch request.',true);
+          return false;
+        }
+        if(target===track){settings=applied;updateCapabilities();note('Camera settings updated.');}
         return true;
       }catch(e){
         if(target===track)note('This camera rejected the setting: '+(e.message||e.name||'unsupported'),true);
@@ -197,7 +205,7 @@
   }
   zoom.addEventListener('change',()=>void applyAdvanced({zoom:Number(zoom.value)}));
   zoom.addEventListener('input',()=>zoomOutput.textContent=Number(zoom.value).toFixed(1)+'×');
-  exposure.addEventListener('change',()=>void applyAdvanced({exposureCompensation:Number(exposure.value)}));
+  exposure.addEventListener('change',()=>{if(autoExposure)autoExposure.checked=false;void applyAdvanced({exposureCompensation:Number(exposure.value)});});
   exposure.addEventListener('input',()=>exposureOutput.textContent=Number(exposure.value).toFixed(1)+' EV');
   focus.addEventListener('change',()=>void applyAdvanced({focusMode:'manual',focusDistance:Number(focus.value)}));
   focus.addEventListener('input',()=>focusOutput.textContent=Number(focus.value).toFixed(2));
@@ -294,6 +302,18 @@
     if(el&&advancedFps)advancedFps.append(el);
   }
   navigator.mediaDevices?.addEventListener?.('devicechange',()=>void listCameras());
+  async function request(media){
+    try{return await navigator.mediaDevices.getUserMedia(media);}
+    catch(e){
+      if(!media?.video?.deviceId?.exact||!['OverconstrainedError','NotFoundError','NotReadableError'].includes(e?.name))throw e;
+      selectedId='';
+      const fallback={...media.video};
+      delete fallback.deviceId;
+      fallback.facingMode={ideal:facing};
+      note('Preferred lens unavailable. Trying another camera.');
+      return navigator.mediaDevices.getUserMedia({...media,video:fallback});
+    }
+  }
   function constraints(base){
     const c={...base};
     if(selectedId){delete c.facingMode;c.deviceId={exact:selectedId};}
@@ -314,11 +334,14 @@
   }
   function onStop(){
     track=null;caps={};settings={};torchOn=false;
+    torch.textContent='Flashlight';torch.setAttribute('aria-pressed','false');
     disable(torch,'Start scanning to use flashlight.');
     disable(zoom,'Start scanning to adjust zoom.');
     disable(exposure,'Start scanning to adjust exposure.');
     disable(focus,'Start scanning to adjust focus.');
     resolution.textContent='Camera off';
+    quality.textContent='Start scanning for local image assessment.';
+    qualityLevel.textContent='Image: waiting';qualityLevel.dataset.quality='idle';
     lensButtons.forEach(b=>{if(b.dataset.lens!=='1')b.disabled=true;});
     note('Camera off. Choose a camera and press Start scanning.');
   }
@@ -329,8 +352,53 @@
       name==='OverconstrainedError'?'Camera setting unsupported. Choose another camera or lower the requested FPS.':
       'Camera error: '+(err?.message||name||'Unavailable'),true);
   }
+
+  // Sample a 160x90 camera frame once per second; QR decoding stays unchanged.
+  // The exposure assistant is opt-in and uses real hardware constraints only.
+  const qCanvas=document.createElement('canvas');qCanvas.width=160;qCanvas.height=90;
+  const qCtx=qCanvas.getContext('2d',{alpha:false,willReadFrequently:true});
+  let qState='idle',qCount=0,lastExposureAdjust=0;
+  function qualityTick(){
+    if(document.hidden||!qCtx||!track||track.readyState!=='live'||video.readyState<2)return;
+    try{
+      qCtx.drawImage(video,0,0,160,90);
+      const data=qCtx.getImageData(0,0,160,90).data;
+      let sum=0,detail=0,n=0;
+      for(let y=6;y<84;y+=3)for(let x=6;x<154;x+=3){
+        const i=4*(y*160+x);
+        const lum=.2126*data[i]+.7152*data[i+1]+.0722*data[i+2];
+        const right=.2126*data[i+4]+.7152*data[i+5]+.0722*data[i+6];
+        sum+=lum;detail+=Math.abs(lum-right);n++;
+      }
+      const mean=sum/n,edge=detail/n;
+      const state=mean<58?'dark':mean>218?'bright':edge<6?'soft':'good';
+      qCount=state===qState?qCount+1:1;qState=state;
+      qualityLevel.dataset.quality=state;
+      qualityLevel.textContent={dark:'Image: dark',bright:'Image: too bright',
+        soft:'Image: low detail',good:'Image: readable'}[state];
+      if(qCount===1)quality.textContent={
+        dark:'Image looks dark. Add light, enable a flashlight or increase exposure.',
+        bright:'Image looks too bright. Reduce glare or lower exposure.',
+        soft:'Image has little detail. Move closer, hold steady and refocus.',
+        good:'Usable brightness and detail. Keep the complete QR grid in view.'
+      }[state];
+      if(autoExposure?.checked&&hasRange(caps.exposureCompensation)&&qCount>=4&&
+         (state==='dark'||state==='bright')&&Date.now()-lastExposureAdjust>6500){
+        lastExposureAdjust=Date.now();
+        const range=caps.exposureCompensation,current=Number(track.getSettings?.().exposureCompensation)||0;
+        const next=clamp(current+(state==='dark'?1:-1)*Math.max(.2,range.step||.1),range.min,range.max);
+        if(Math.abs(next-current)>.01)void applyAdvanced({exposureCompensation:next});
+      }
+    }catch{
+      quality.textContent='Image analysis not available in this browser.';
+      qualityLevel.textContent='Image analysis unavailable';
+      qualityLevel.dataset.quality='unknown';
+    }
+  }
+  setInterval(qualityTick,1000);
+
   window.QRTurboCamera={
-    constraints,onTrack,onStop,onError,listCameras,cameraRole,readableName,
+    constraints,request,onTrack,onStop,onError,listCameras,cameraRole,readableName,
     get state(){return {selectedId,facing,devices:devices.map(d=>({label:d.label,role:cameraRole(d.label).id})),settings,caps};}
   };
   disable(torch,'Start scanning first.');disable(zoom,'Start scanning first.');
