@@ -1,0 +1,30 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {runInNewContext} from 'node:vm';
+const ctx={Uint8Array,Uint32Array,Float64Array,DataView,ArrayBuffer,TextEncoder,TextDecoder,Map,Set,Promise,
+  Math,Object,Number,Error,RangeError,Blob,crypto:globalThis.crypto};
+ctx.globalThis=ctx;
+runInNewContext(readFileSync('dist/receive/highspeed-protocol.js','utf8'),ctx);
+runInNewContext(readFileSync('dist/turbo-protocol.js','utf8'),ctx);
+const H=ctx.AirFerryHighSpeed;
+assert.ok(H.LTEncoder&&H.LTDecoder);
+const data=new Uint8Array(70000).map((_,i)=>i%251);
+const encoder=new H.LTEncoder(data,1,1337);
+assert.equal(encoder.k,70000);
+const seq=(0x80000000|69999)>>>0;
+const block=encoder.encode(seq);
+const header={sessionId:1337,seq,k:encoder.k,blockLen:1,totalLen:data.length,
+  payloadFnv:H.fnv1a(data),layoutCodes:16,tileIndex:15,systematic:true};
+const frame=H.packFrame(header,block);
+assert.equal(frame.length,25);
+const decoded=H.parseFrame(frame);
+assert.equal(decoded.header.k,70000);
+assert.equal(decoded.header.tileIndex,15);
+const decoder=new H.LTDecoder(70000,1,1337,data.length);
+decoder.addFrame(seq,decoded.block);
+assert.equal(decoder.solvedCount,1);
+assert.equal(decoder.solved[69999][0]&255,data[69999]&255);
+const legacyFrame=H.packFrame({...header,layoutCodes:4,k:4,totalLen:4,tileIndex:0},new Uint8Array([21]));
+const legacyParsed=H.parseFrame(legacyFrame);
+assert.equal(legacyParsed.header.layoutCodes,4);
+console.log('Turbo V2 codec integration passed: >65,535 fountain blocks and legacy compatibility.');

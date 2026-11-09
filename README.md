@@ -106,3 +106,12 @@ Video export is inside **Send** at `/send/#videoExportPanel`; the legacy `/expor
 - **Faster:** four QR codes, 1465 bytes each, 20 FPS, 4 pixels per module (1064 × 1064), 6000 kbps requested.
 
 The encoder attempts to capture each QR update with `captureStream(0)` and `requestFrame()` where supported, falling back to ordinary FPS capture. Use **Auto duration** to estimate enough frames for redundancy, and check the downloaded video in **Import Video**. Extremely low bitrate or 2px QR modules may be impossible to decode after lossy compression; requested bitrate is not guaranteed to equal the output bitrate. Private files should be encrypted separately because QR transfers are not encrypted.
+
+
+## Turbo Grid V2 (8 / 16 QR codes)
+
+New experimental high-density layouts: **8 QR codes (4×2)** and **16 QR codes (4×4)**, with touch-friendly presets and an **Overdrive 16×120 FPS** profile. Both live streaming and locally generated WebM videos use the same V2 optical packets. The receiver offers **Auto / 8 / 16** grid scanning settings.
+
+V2 packets include a 32-bit block count (instead of V1's 16-bit field) and the QR tile index, enabling high-density grid tracking. V1 remains backward compatible. High-FPS profiles update four tiles at a time; values such as 16×120 FPS are target settings, not proven camera throughput. The actual results depend heavily on optical resolution and hardware.
+
+See [TURBO-V2.md](TURBO-V2.md) for frame layout, compatibility, limitations, and testing.

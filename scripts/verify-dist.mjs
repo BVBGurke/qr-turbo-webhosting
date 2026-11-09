@@ -65,3 +65,16 @@ if (!sender.includes('requiredBlocks > 0xffff') || sender.includes('if (total > 
 }
 if (receiver.includes('Videos over 1 GB are not supported.')) throw new Error('Legacy 1 GiB video input cap remains');
 console.log('Fixed upload caps removed; protocol format boundaries preserved.');
+
+for (const mode of ['send','receive','screen','import']) {
+  const html = readFileSync(join(dir,mode,'index.html'),'utf8');
+  if(!html.includes('turbo-protocol.js'))throw Error('Turbo V2 protocol not loaded: '+mode);
+  if(!html.includes('turbo-grid.css')||!html.includes('turbo-grid-ui.js'))throw Error('Turbo Grid controls not loaded: '+mode);
+  if(mode!=='send'&&!html.includes('id="turboGridMode"'))throw Error('Turbo Grid scanner selection missing: '+mode);
+}
+if(!sender.includes('8 QR codes')||!sender.includes('16 QR codes'))throw Error('New layouts missing from sender');
+if(!sender.includes('codesPerScreen >= 8')||!sender.includes('H.TURBO_HEADER_LEN'))throw Error('Turbo V2 encoder not wired to sender');
+if(!sender.includes('QRTurboOfflineFrames'))throw Error('No offline packet iterator');
+const videoCode=readFileSync(join(dir,'video-export.js'),'utf8');
+if(!videoCode.includes('grid8')||!videoCode.includes('grid16')||!videoCode.includes("hexadeca"))throw Error('Turbo Grid offline video profiles missing');
+console.log('Turbo V2 layout, receiver, and offline-video checks passed.');
