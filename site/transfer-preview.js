@@ -109,7 +109,7 @@
       const item=node('div','transfer-preview__item');
       const url=ownURL(file);selectionUrls.push(url);
       const kind=mediaType(file.name,file.type);
-      if(['image','video','audio'].includes(kind)){
+      if(['image','video','audio','text'].includes(kind)){
         const thumb=renderMedia({file,url,name:file.name,mime:file.type,controls:files.length===1});
         item.append(thumb);
       } else item.append(node('span','transfer-preview__fallback','▧'));
