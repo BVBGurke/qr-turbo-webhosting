@@ -35,14 +35,6 @@ async function test(viewport){
   await page.locator('#cameraAdvancedBtn').click();
   assert.equal(await page.locator('#cameraAdvanced').isVisible(),true);
   assert.ok(await page.locator('#cameraDeviceMap').count());
-  // Unknown camera labels are not guessed. Users may explicitly map physical lenses.
-  const mapper=page.locator('.camera-map-entry select').first();
-  if(await mapper.count()){
-    await page.locator('.camera-map summary').click();
-    await mapper.selectOption('ultra');
-    assert.ok(await page.locator('[data-lens="0.5"]').isEnabled(),'Manual ultra-wide mapping should enable lens shortcut');
-    await mapper.selectOption('auto');
-  }
   assert.ok(await page.locator('#cameraAdvancedFps #fps60').count());
   assert.ok(await page.locator('#cameraAdvancedFps #turboGridMode').count());
   await page.locator('#cameraSimpleBtn').click();
@@ -70,6 +62,14 @@ async function test(viewport){
   assert.equal(capabilities.track,'live');
   assert.ok(capabilities.cameras>=1);
   await page.locator('#cameraAdvancedBtn').click();
+  await page.evaluate(()=>window.QRTurboCamera.listCameras());
+  const mapper=page.locator('.camera-map-entry select').first();
+  if(await mapper.count()){
+    await page.locator('.camera-map summary').click();
+    await mapper.selectOption('ultra');
+    assert.ok(await page.locator('[data-lens="0.5"]').isEnabled(),'Manual ultra-wide mapping should enable lens shortcut');
+    await mapper.selectOption('auto');
+  }
   await page.waitForFunction(()=>!document.getElementById('cameraQualityHint')?.textContent.startsWith('Start scanning'),
     null,{timeout:6000});
   assert.ok(await page.locator('#cameraQualityHint').isVisible());

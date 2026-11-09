@@ -130,6 +130,10 @@
         select.add(new Option(name,value));
       }
       select.value=lensOverrides.get(d.deviceId)||'auto';
+      if(!d.deviceId){
+        select.disabled=true;
+        select.title='Start scanning and grant camera permission before assigning a lens.';
+      }
       select.addEventListener('change',()=>{
         if(select.value==='auto')lensOverrides.delete(d.deviceId);
         else lensOverrides.set(d.deviceId,select.value);
