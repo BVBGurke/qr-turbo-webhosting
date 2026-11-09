@@ -7,7 +7,7 @@
   <meta name="description" content="Transfer files between devices using animated QR codes. No account, file upload or shared network required.">
   <title>QR Turbo — Fast offline file transfer</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2.1.1/css/pico.min.css"><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="ui.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2.1.1/css/pico.min.css"><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="ui.css"><link rel="stylesheet" href="ux.css">
   <script defer src="app.js"></script>
 </head>
 <body>
@@ -19,7 +19,7 @@
         <span class="logo" aria-hidden="true"><svg viewBox="0 0 40 40" fill="none"><rect x="5" y="5" width="12" height="12" rx="2" fill="currentColor"/><rect x="23" y="5" width="12" height="12" rx="2" fill="currentColor"/><rect x="5" y="23" width="12" height="12" rx="2" fill="currentColor"/><rect x="24" y="24" width="4" height="4" fill="currentColor"/><rect x="31" y="24" width="4" height="4" fill="currentColor"/><rect x="24" y="31" width="4" height="4" fill="currentColor"/><rect x="31" y="31" width="4" height="4" fill="currentColor"/></svg></span>
         <span>QR <strong>Turbo</strong></span>
       </a>
-      <div class="nav-actions"><nav class="home-links" aria-label="Main navigation"><a href="send/">Send</a><a href="receive/">Camera</a><a href="screen/">Screen</a><a href="import/">Import Video</a></nav><span class="offline-pill"><span class="live-dot"></span> Local & private</span><a class="github" href="https://github.com/shuipashui/beamferry" target="_blank" rel="noopener noreferrer">Open-source engine <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 17 17 7M8 7h9v9"/></svg></a></div>
+      <div class="nav-actions"><nav class="home-links" aria-label="Main navigation"><a href="send/">Send</a><a href="receive/">Camera</a><a href="screen/">Screen</a><a href="import/">Import Video</a></nav><span class="offline-pill"><span class="live-dot"></span> Local & private</span><a class="github" href="https://github.com/BVBGurke/qr-turbo-webhosting" target="_blank" rel="noopener noreferrer">Open-source engine <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 17 17 7M8 7h9v9"/></svg></a></div>
     </header>
 
     <main>
@@ -34,6 +34,15 @@
         <div class="statusline"><span id="secureStatus" class="status-chip">Checking browser…</span><span class="mini-divider"></span> Files transfer optically between devices</div>
       </section>
 
+      <section class="turbo-quickstart" aria-labelledby="turbo-quickstart-title">
+  <div><p class="overline">QUICK START</p><h2 class="turbo-quickstart-heading" id="turbo-quickstart-title">Pick a transfer method.</h2><p class="turbo-quickstart-copy">No sign-in, no file upload. Start on the device that holds your file, then open the matching receiver.</p></div>
+  <div class="turbo-quickstart-choices">
+    <a class="turbo-start-primary" href="send/"><span>Send live<small>Display animated QR codes</small></span><span aria-hidden="true">↗</span></a>
+    <a href="send/#videoExportPanel"><span>Record QR video<small>Save a shareable recording</small></span><span aria-hidden="true">↗</span></a>
+    <a href="receive/"><span>Scan with camera<small>Receive on your phone</small></span><span aria-hidden="true">↗</span></a>
+    <a href="import/"><span>Decode QR video<small>Import a saved recording</small></span><span aria-hidden="true">↗</span></a>
+  </div>
+</section>
       <section class="stats-bar" aria-label="Technical features">
         <div><strong>4<span class="unit">×</span></strong><small>Parallel QR codes</small></div>
         <div><strong>30<span class="unit"> FPS</span></strong><small>Stable default mode</small></div>
