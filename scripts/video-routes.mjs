@@ -7,6 +7,8 @@ function mustReplace(content, needle, replacement, file) {
 }
 
 function insertVideoReceiverHooks(source) {
+  // Upstream source contains mixed CRLF/LF line endings; normalize before editing.
+  source = source.replace(/\r\n/g, '\n');
   source = mustReplace(source,
     '  async function start() {',
     String.raw`  async function startLocalVideoImport() {
