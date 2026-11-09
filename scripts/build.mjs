@@ -57,7 +57,6 @@ function addCommonUI(path, mode) {
     <a href="${base}send/" class="${mode==='send'?'active':''}">Send</a>
     <a href="${base}receive/" class="${mode==='receive'?'active':''}">Camera</a>
     <a href="${base}screen/" class="${mode==='screen'?'active':''}">Screen</a>
-    <a href="${base}export/" class="">Export Video</a>
     <a href="${base}import/" class="">Import Video</a>
   </div>
   <a class="turbo-home" href="${base}">Home ↗</a>
@@ -106,6 +105,24 @@ try {
   let helpHtml = readFileSync(senderHelp, 'utf8');
   helpHtml = helpHtml.replace(/<details class="guide">[\s\S]*?<\/details>/, '<details class="guide"><summary>Performance tips & compatibility</summary><p class="tip">Start with four QR codes at 2068 B and 30 FPS. If your camera struggles, use fullscreen or reduce bytes per code to 1465 B. High frame rates are experimental. Dual-code mode is intended for the Android receiver. Press Space to pause playback.</p></details>');
   writeFileSync(senderHelp, helpHtml);
+  // Export the native QR pattern matrices, preserving BeamFerry's fountain-code packet order.
+  // These hooks are active only when a recording UI attaches its callbacks.
+  const senderPath = join(output, 'send', 'index.html');
+  let senderMarkup = readFileSync(senderPath, 'utf8');
+  function senderEdit(find, value) {
+    if (!senderMarkup.includes(find)) throw new Error('Sender export patch missing: ' + find.slice(0, 90));
+    senderMarkup = senderMarkup.replace(find, value);
+  }
+  senderEdit('const FPS_CHOICES = {\n    single: [', 'const FPS_CHOICES = {\n    single: [\n      ["10", "10 FPS video"],\n      ["12", "12 FPS video"],');
+  senderEdit('    quad: [\n      ["20", "20 FPS"],', '    quad: [\n      ["12", "12 FPS video"],\n      ["15", "15 FPS video"],\n      ["20", "20 FPS"],');
+  senderEdit('const CHUNK_CHOICES = {\n    single: [', 'const CHUNK_CHOICES = {\n    single: [\n      ["1003", "1003 B compact video"],');
+  senderEdit('      playBtn.disabled = false;\n      if (hudPlayBtn)', '      prepareBtn.disabled = false;\n      playBtn.disabled = false;\n      if (hudPlayBtn)');
+  senderEdit('      if (viewerHud) viewerHud.hidden = false;', '      if (viewerHud) viewerHud.hidden = false;\n      window.dispatchEvent(new CustomEvent("qr-turbo:prepared", { detail: { k: transfer.total, blockLen: transfer.header.blockLen, layoutCodes: transfer.header.layoutCodes, name: payload.name, originalBytes: payload.bytes.length, transmittedBytes: packed.transmittedSize } }));');
+  senderEdit('      statusText.textContent = "生成失败：" + error.message;', '      statusText.textContent = "生成失败：" + error.message;\n      window.dispatchEvent(new CustomEvent("qr-turbo:prepare-error", { detail: String(error.message) }));');
+  senderEdit('        drawPatternTile(context, pattern, col * metrics.tilePx, row * metrics.tilePx, metrics.quiet, metrics.scale);\n      });',
+    '        drawPatternTile(context, pattern, col * metrics.tilePx, row * metrics.tilePx, metrics.quiet, metrics.scale);\n      });\n      if (typeof window.QRTurboOnQRRender === "function") window.QRTurboOnQRRender(patterns);');
+  writeFileSync(senderPath, senderMarkup);
+
   // Critical: the sender's embedded QR URL MUST point to the self-hosted receiver.
   patch(join(output, 'send', 'index.html'), [
     ['const RECEIVER_URL = "https://shuipashui.github.io/beamferry/";', 'const RECEIVER_URL = new URL("../receive/", location.href).href;'],
