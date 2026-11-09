@@ -23,7 +23,7 @@ const count=(hex)=>{
 };
 assert.equal(count('1f43b675'),2,'Two seekable clusters at five seconds');
 assert.equal(count('1c53bb6b'),1,'Cue table is present');
-assert.equal(count('a3'),4,'Every encoded video frame becomes a SimpleBlock');
+assert.equal(count('a38981'),4,'Every encoded video frame becomes a SimpleBlock');
 assert.equal(Buffer.from(raw).includes(Buffer.from('V_VP8')),true,'Codec ID is VP8');
 assert.equal(Buffer.from(raw).includes(Buffer.from('webm')),true,'WebM document type');
 assert.throws(()=>new WebMWriter({width:0,height:640,fps:30,duration:2}),/dimensions/);

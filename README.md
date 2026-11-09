@@ -45,6 +45,14 @@ Open `http://localhost:8080`. Camera and screen-capture APIs require HTTPS or lo
 
 The sender's receiver-link QR code automatically uses your own domain, including subdirectory deployments.
 
+## Direct offline QR video export
+
+In **Send → Create QR video**, choose a file and quality preset, then click **Create and download video**. The client computes the entire QR sequence and encodes a WebM (VP8/VP9) video using WebCodecs with synthetic timestamps. This is **not real-time recording**: generation speed depends on your CPU/GPU and settings. There is no video upload.
+
+**Custom settings** allow one or four QR codes, adjustable payload per QR code, and 10–120 FPS video, subject to compatible sender presets. For **Live QR**, 4-code 120 FPS is experimental and limited by your screen refresh rate and the receiver's scanning capabilities.
+
+WebM generation requires a supported secure-context browser. Video size is a bitrate **target**, not a guaranteed size. Very low resolutions, bitrates, and video recompression can render QR codes unreadable; test the generated file using **Import video** before sharing.
+
 ## Speed and limitations
 
 BeamFerry documents **425 KB/s** in a Windows/Edge screen-capture reference test. This is not a guaranteed phone-camera speed. Real throughput depends on camera focus, screen brightness, display refresh rate, QR density, and lighting.
