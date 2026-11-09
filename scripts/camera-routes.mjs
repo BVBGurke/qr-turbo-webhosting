@@ -64,7 +64,7 @@ function enhanceReceiverApp(source){
     CAMERA_BRIDGE + '\n  startHighSpeedWorkers();\n})();',
     'camera switch bridge');
   const native='navigator.mediaDevices.getUserMedia({';
-  if(source.split(native).length-1!==3)throw new Error('Expected exactly three camera acquisition sites');
+  if(source.split(native).length-1!==2)throw new Error('Expected exactly two upstream camera acquisition sites');
   source=source.replaceAll(native,'window.QRTurboCamera.request({');
   return source;
 }
