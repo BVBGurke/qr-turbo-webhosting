@@ -36,7 +36,12 @@ async function test(viewport){
   assert.equal(await page.locator('#cameraAdvanced').isVisible(),true);
   assert.ok(await page.locator('#cameraDeviceMap').count());
   assert.ok(await page.locator('#cameraAdvancedFps #fps60').count());
-  assert.ok(await page.locator('#cameraAdvancedFps #turboGridMode').count());
+  assert.ok(await page.locator('#cameraStudio #turboGridMode').count());
+  const layouts=await page.locator('#turboGridMode option').evaluateAll(nodes=>nodes.map(n=>n.value));
+  assert.ok(['auto','1','4','8','16'].every(id=>layouts.includes(id)),'All 1/4/8/16 scan layouts selectable');
+  await page.selectOption('#turboGridMode','16');
+  assert.match(await page.locator('#status').innerText(),/16 QR tiles/i);
+  await page.selectOption('#turboGridMode','auto');
   await page.locator('#cameraSimpleBtn').click();
   assert.equal(await page.locator('#cameraAdvanced').isVisible(),false);
   // Real browser start: the fake camera still produces a MediaStreamTrack.
@@ -61,6 +66,35 @@ async function test(viewport){
   }));
   assert.equal(capabilities.track,'live');
   assert.ok(capabilities.cameras>=1);
+  assert.equal(await page.locator('#cameraFullscreen').isVisible(),true);
+  assert.equal(await page.locator('#cameraStage video').evaluate(el=>getComputedStyle(el).objectFit),'contain');
+  // Exercise the fallback for browsers without arbitrary-element fullscreen.
+  await page.evaluate(()=>{
+    document.getElementById('cameraStage').requestFullscreen=()=>Promise.reject(Error('unsupported'));
+  });
+  await page.locator('#cameraFullscreen').click();
+  await page.waitForFunction(()=>document.body.classList.contains('camera-fullscreen-mode'),{timeout:5000});
+  for(const id of ['cameraOverlayStart','cameraOverlayFlip','cameraOverlayTorch','cameraOverlayFocus']){
+    assert.ok(await page.locator('#'+id).isVisible());
+  }
+  const rect=await page.evaluate(()=>{
+    const r=document.getElementById('cameraStage').getBoundingClientRect();
+    return {w:r.width,h:r.height,iw:innerWidth,ih:innerHeight};
+  });
+  assert.ok(Math.abs(rect.w-rect.iw)<3,'Camera fullscreen must fill screen width');
+  assert.ok(Math.abs(rect.h-rect.ih)<3,'Camera fullscreen must fill screen height');
+  assert.equal(await page.evaluate(()=>window.QRTurboCameraBridge.isRunning()),true);
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(()=>!document.body.classList.contains('camera-fullscreen-mode'));
+  // A real detected QR would send this corner geometry from the decoder.
+  await page.evaluate(()=>{
+    const v=document.getElementById('video');
+    window.dispatchEvent(new CustomEvent('qr-turbo:scan-hit',{detail:{hits:[{
+      corners:[{x:20,y:20},{x:60,y:20},{x:60,y:60},{x:20,y:60}],
+      videoWidth:v.videoWidth,videoHeight:v.videoHeight
+    }]}}));
+  });
+  assert.equal(await page.locator('#cameraDetectionOverlay polygon').count(),1);
   await page.locator('#cameraAdvancedBtn').click();
   await page.evaluate(()=>window.QRTurboCamera.listCameras());
   const mapper=page.locator('.camera-map-entry select').first();
