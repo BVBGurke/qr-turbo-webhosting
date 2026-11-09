@@ -63,3 +63,12 @@ body.oil-app #cameraAdvancedFps .fps-switch{margin:0!important}
 .camera-auto-exposure{display:flex;gap:9px;align-items:center;color:#d4ebd1;font-size:12px;line-height:1.4}
 .camera-auto-exposure input{width:17px;height:17px;accent-color:#c8f56f}
 .camera-auto-exposure input:disabled{opacity:.45}
+
+.camera-map-entry label{display:flex;gap:9px;align-items:center;justify-content:space-between;
+  font-size:11px;font-weight:700;color:#b9cdbb}
+body.oil-app .camera-map-entry select{min-width:145px;max-width:240px;min-height:39px!important;
+  font-size:11px!important;margin:0!important;padding:6px 23px 6px 9px!important;
+  color:#effae9!important;background:#13291d!important;border:1px solid #4c7455!important;
+  border-radius:8px!important}
+@media(max-width:410px){.camera-map-entry label{align-items:stretch;flex-direction:column}
+  body.oil-app .camera-map-entry select{max-width:100%;width:100%}}

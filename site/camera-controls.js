@@ -20,6 +20,17 @@
     resolution=$('cameraActualResolution'), capabilitiesInfo=$('cameraCapabilityList');
   let track=null, devices=[], selectedId='', facing='environment', locked=false, torchOn=false,
     caps={}, settings={}, requestSerial=0;
+  const lensOverrides=new Map();
+  const lensNames={ultra:'Ultra-wide',back:'Main / rear',tele:'Telephoto',
+    front:'Front / selfie',macro:'Macro',unknown:'Other'};
+  try{
+    for(const [id,role] of Object.entries(JSON.parse(sessionStorage.getItem('qrt-camera-lens-map')||'{}'))){
+      if(Object.hasOwn(lensNames,role)&&id)lensOverrides.set(id,role);
+    }
+  }catch{}
+  function saveLensMap(){
+    try{sessionStorage.setItem('qrt-camera-lens-map',JSON.stringify(Object.fromEntries(lensOverrides)));}catch{}
+  }
   const knownRoles=[
     [/ultra[\s-]?wide|ultrawide|0[.,]5\s*[x×]|0[.,]6\s*[x×]|超广角/i,'ultra','Ultra-wide'],
     [/telephoto|periscope|optical.?zoom|tele.?camera|长焦/i,'tele','Telephoto'],
@@ -31,9 +42,14 @@
     for(const [regexp,id,name] of knownRoles)if(regexp.test(label))return {id,name};
     return {id:'unknown',name:'Camera'};
   }
+  function resolvedRole(device){
+    const id=device?.deviceId;
+    const manual=id?lensOverrides.get(id):null;
+    return manual?{id:manual,name:lensNames[manual],manual:true}:cameraRole(device?.label||'');
+  }
   function readableName(device,index){
     const label=(device?.label||'').trim();
-    const role=cameraRole(label);
+    const role=resolvedRole(device);
     if(!label)return 'Camera '+(index+1)+' (permission needed)';
     // Keep hardware's actual label visible: don't claim a specific optical lens
     // simply from enumeration order or a browser-assigned index.
@@ -98,13 +114,34 @@
     desc.textContent='Device names come from your browser after permission. Lens roles are inferred only when the camera label identifies them; unknown lenses are not guessed.';
     map.append(desc);
     for(let i=0;i<devices.length;i++){
-      const d=devices[i],role=cameraRole(d.label);
+      const d=devices[i],role=resolvedRole(d);
       const row=document.createElement('div');row.className='camera-map-entry';
-      const title=document.createElement('strong');title.textContent=readableName(d,i);
+      const title=document.createElement('strong');title.textContent=(d.label||('Camera '+(i+1)));
       const sub=document.createElement('small');
-      sub.textContent='Detected type: '+(role.id==='unknown'?'Not identified':role.name)+
+      sub.textContent=(role.manual?'Manually mapped':'Detected')+': '+
+        (role.id==='unknown'?'Not identified':role.name)+
         (d.deviceId===(track?.getSettings?.().deviceId||selectedId)?' · Active':'');
-      row.append(title,sub);map.append(row);
+      const label=document.createElement('label');label.textContent='Assign lens';
+      const select=document.createElement('select');
+      select.setAttribute('aria-label','Assign lens for '+(d.label||('Camera '+(i+1))));
+      for(const [value,name] of [['auto','Auto detect'],['ultra','0.5× · Ultra-wide'],
+        ['back','1× · Main camera'],['tele','2× · Telephoto'],
+        ['front','Front / selfie'],['macro','Macro'],['unknown','Other']]){
+        select.add(new Option(name,value));
+      }
+      select.value=lensOverrides.get(d.deviceId)||'auto';
+      select.addEventListener('change',()=>{
+        if(select.value==='auto')lensOverrides.delete(d.deviceId);
+        else lensOverrides.set(d.deviceId,select.value);
+        saveLensMap();
+        devices.forEach((device,index)=>{
+          const option=cameraSelect.options[index];
+          if(option)option.textContent=readableName(device,index);
+        });
+        updateLensButtons();updateMap();
+        note('Lens mapping updated locally. Camera hardware is unchanged.');
+      });
+      label.append(select);row.append(title,sub,label);map.append(row);
     }
   }
   function currentCapabilities(){
@@ -161,10 +198,10 @@
     updateMap();
   }
   function updateLensButtons(){
-    const roleOf=d=>cameraRole(d.label).id;
+    const roleOf=d=>resolvedRole(d).id;
     const ultrawide=devices.find(d=>roleOf(d)==='ultra');
     const tele=devices.find(d=>roleOf(d)==='tele');
-    const currentRole=cameraRole(devices.find(d=>d.deviceId===settings.deviceId)?.label||'').id;
+    const currentRole=resolvedRole(devices.find(d=>d.deviceId===settings.deviceId)).id;
     const z=hasRange(caps.zoom)?caps.zoom:null;
     for(const button of lensButtons){
       const lens=button.dataset.lens;
@@ -235,9 +272,9 @@
   flip.addEventListener('click',async()=>{
     if(locked)return;
     const active=devices.find(d=>d.deviceId===(track?.getSettings?.().deviceId||selectedId));
-    const activeRole=cameraRole(active?.label||'').id;
+    const activeRole=resolvedRole(active).id;
     const toFront=activeRole!=='front' && facing==='environment';
-    const target=devices.find(d=>cameraRole(d.label).id===(toFront?'front':'back'));
+    const target=devices.find(d=>resolvedRole(d).id===(toFront?'front':'back'));
     facing=toFront?'user':'environment';
     selectedId=target?.deviceId||'';
     if(window.QRTurboCameraBridge?.isRunning())await selectDevice(selectedId);
@@ -246,7 +283,7 @@
   lensButtons.forEach(button=>button.addEventListener('click',async()=>{
     if(button.disabled||locked)return;
     const value=Number(button.dataset.lens),role=value===.5?'ultra':value===2?'tele':'back';
-    const candidate=devices.find(d=>cameraRole(d.label).id===role);
+    const candidate=devices.find(d=>resolvedRole(d).id===role);
     if(candidate && candidate.deviceId!==(track?.getSettings?.().deviceId||selectedId)){
       await selectDevice(candidate.deviceId);
       return;
@@ -398,7 +435,7 @@
   setInterval(qualityTick,1000);
 
   window.QRTurboCamera={
-    constraints,request,onTrack,onStop,onError,listCameras,cameraRole,readableName,
+    constraints,request,onTrack,onStop,onError,listCameras,cameraRole,readableName,resolvedRole,
     get state(){return {selectedId,facing,devices:devices.map(d=>({label:d.label,role:cameraRole(d.label).id})),settings,caps};}
   };
   disable(torch,'Start scanning first.');disable(zoom,'Start scanning first.');
