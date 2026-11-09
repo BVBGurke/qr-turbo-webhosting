@@ -85,3 +85,5 @@ npm run test:dist
 ```
 
 The CI **Verify build** workflow checks the project independently of GitHub Pages deployment settings.
+
+Both video tabs have an accessible **Show preview / Hide preview** button and checkbox. Export hides only the on-screen QR view (canvas recording keeps running). Import displays a video player next to the selected file, and hiding the preview does not disable frame decoding. The local packet log and decoding metrics remain visible.

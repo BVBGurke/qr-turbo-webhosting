@@ -28,7 +28,21 @@
     blocks.textContent='0 / —';logCount.textContent='0 packets';videoProgress.value=0;
     time.textContent='0:00 / —';log('New analysis session.');
   }
-  function showPreview() {viewer?.classList.toggle('preview-hidden',!visibility.checked);}
+  const previewToggle = $('importTogglePreview');
+  const previewState = $('importPreviewState');
+  function setPreviewState(message) { if (previewState) previewState.textContent = message; }
+  function showPreview() {
+    viewer?.classList.toggle('preview-hidden',!visibility.checked);
+    if (previewToggle) {
+      previewToggle.textContent = visibility.checked ? 'Hide preview' : 'Show preview';
+      previewToggle.setAttribute('aria-pressed', String(visibility.checked));
+    }
+    viewer?.setAttribute('aria-label', visibility.checked ? 'Video analysis preview visible' : 'Video analysis preview hidden; decoding continues');
+  }
+  previewToggle?.addEventListener('click', () => {
+    visibility.checked = !visibility.checked;
+    showPreview();
+  });
   visibility.addEventListener('change',showPreview);
   showPreview();
   videoFile.addEventListener('change', () => {
@@ -36,6 +50,7 @@
     fileInfo.textContent=f ? f.name+' · '+fmtSize(f.size)+' · '+(f.type || 'video file') : 'No video selected.';
     start.disabled = !f;
     resetCounters();
+    setPreviewState(f ? 'Video selected' : 'Waiting for video');
     if(f)log('Selected '+f.name+' ('+fmtSize(f.size)+').');
   });
   start.disabled=true;
@@ -43,22 +58,27 @@
     if(!videoFile.files?.[0])return;
     resetCounters();active=true;
     start.disabled=true;stop.disabled=false;
+    setPreviewState('Starting analysis');
     log('Starting local video analysis. No data is uploaded.');
     $('startBtn')?.click();
   });
   stop.addEventListener('click', () => {
     $('stopBtn')?.click();active=false;start.disabled=false;stop.disabled=true;
+    setPreviewState('Stopped');
     log('Analysis stopped by user.');
   });
   $('videoImportReset').addEventListener('click', () => {
     $('resetBtn')?.click();active=false;start.disabled=!videoFile.files?.[0];stop.disabled=true;
     resetCounters();
+    setPreviewState('Waiting for video');
   });
   window.QRTurboVideoStarted = d => {
+    setPreviewState('Analyzing');
     log('Video opened: '+d.width+'×'+d.height+' · duration '+fmtTime(d.duration));
     active=true;start.disabled=true;stop.disabled=false;
   };
   window.QRTurboVideoError = message => {
+    setPreviewState('Error');
     log('ERROR: '+message);active=false;start.disabled=false;stop.disabled=true;
   };
   window.QRTurboOnFrame = packet => {
@@ -72,6 +92,7 @@
   };
   window.QRTurboVideoComplete = result => {
     completed=true;active=false;start.disabled=false;stop.disabled=true;
+    setPreviewState('Decoded');
     videoProgress.value=100;
     log('SUCCESS: '+result.name+' · '+fmtSize(result.size)+' · SHA-256 verified. Download below.');
   };
@@ -104,13 +125,14 @@
     const position=video.currentTime||0;
     if(position+0.75<previousPosition && previousPosition>video.duration*0.65) {
       loops++;log('Video playback loop '+loops+'. Re-scanning to recover missed packets.');
-      if(loops>=3){$('stopBtn')?.click();active=false;start.disabled=false;stop.disabled=true;log('Stopped after three loops. Try a clearer/high-bitrate recording if incomplete.');}
+      if(loops>=3){$('stopBtn')?.click();active=false;start.disabled=false;stop.disabled=true;setPreviewState('Incomplete');log('Stopped after three loops. Try a clearer/high-bitrate recording if incomplete.');}
     }
     previousPosition=position;
     time.textContent=fmtTime(position)+' / '+fmtTime(video.duration);
     videoProgress.value=Math.min(100,Math.floor(position/video.duration*100));
     if(video.ended && !completed) {
       active=false;start.disabled=false;stop.disabled=true;
+      setPreviewState('Incomplete');
       log('Video ended. '+frames+' packets received; try enabling Loop for missed QR frames.');
     }
     if(scanStatus?.textContent?.includes('unavailable') && frames===0) log('Decoder unavailable; check browser support.');

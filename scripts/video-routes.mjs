@@ -103,7 +103,11 @@ export function addVideoRoutes(output) {
         <option value="120">2 minutes</option><option value="240">4 minutes</option>
       </select></label>
     </div>
-    <label class="video-check"><input type="checkbox" id="exportPreview" checked> Show QR playback while recording</label>
+    <div class="video-preview-controls" role="group" aria-label="Export playback preview">
+      <div class="video-preview-title"><span class="video-preview-indicator" aria-hidden="true"></span><strong>QR playback preview</strong><span class="video-preview-state" id="exportPreviewState">Ready</span></div>
+      <label class="video-check"><input type="checkbox" id="exportPreview" checked> Show preview</label>
+      <button type="button" class="video-preview-toggle" id="exportTogglePreview" aria-pressed="true">Hide preview</button>
+    </div>
     <div class="video-buttons"><button type="button" id="exportRecord">Record video</button><button type="button" id="exportStop" disabled>Stop recording</button></div>
     <progress id="exportProgress" value="0" max="100"></progress>
     <output id="exportStatus" role="status">Select a file, then click Prepare QR stream.</output>
@@ -123,8 +127,14 @@ export function addVideoRoutes(output) {
     <p>Open an animated QR recording made by QR Turbo. Everything is decoded locally, with visual progress and detailed incoming-data logs.</p>
     <label>Video file (WebM / MP4)<input type="file" id="videoImportFile" accept="video/webm,video/mp4,video/quicktime,video/*"></label>
     <p id="videoImportInfo" class="video-metadata">No video selected.</p>
+    <div class="video-preview-controls" role="group" aria-label="Video analysis preview">
+      <div class="video-preview-title"><span class="video-preview-indicator" aria-hidden="true"></span><strong>Video analysis preview</strong><span class="video-preview-state" id="importPreviewState">Waiting for video</span></div>
+      <label class="video-check"><input type="checkbox" id="videoImportPreview" checked> Show preview</label>
+      <button type="button" class="video-preview-toggle" id="importTogglePreview" aria-pressed="true">Hide preview</button>
+    </div>
+    <div class="video-preview-placement" id="videoPreviewPlacement"></div>
     <div class="video-options">
-      <label class="video-check"><input type="checkbox" id="videoImportPreview" checked> Show video while analyzing</label>
+      
       <label class="video-check"><input type="checkbox" id="videoLoop" checked> Loop for missed QR frames</label>
     </div>
     <div class="video-buttons">
@@ -146,7 +156,14 @@ export function addVideoRoutes(output) {
       <pre id="videoDataLog" role="log" aria-live="off">Select a video to begin.</pre>
     </details>
   </section>`, importPath);
-  imp = mustReplace(imp, '<script src="vendor/jsQR.js"></script>', '<script>window.QRTurboVideoImport = true;</script><script src="vendor/jsQR.js"></script>', importPath);
+  // Move the actual receiver video element into the import controls, so it is visible
+  // immediately next to the file picker instead of far below diagnostics.
+  const cameraMarkup = imp.match(/<section class="camera-card">[\s\S]*?<\/section>/);
+  if (!cameraMarkup) throw new Error('Could not locate upstream camera preview stage');
+  imp = imp.replace(cameraMarkup[0], '');
+  const movedMarkup = cameraMarkup[0].replace('<section class="camera-card">', '<section class="camera-card" id="videoImportStage" aria-label="QR video preview">');
+  imp = mustReplace(imp, '<div class="video-preview-placement" id="videoPreviewPlacement"></div>', movedMarkup, importPath);
+    imp = mustReplace(imp, '<script src="vendor/jsQR.js"></script>', '<script>window.QRTurboVideoImport = true;</script><script src="vendor/jsQR.js"></script>', importPath);
   imp = mustReplace(imp, '</body>', '<script src="../video-import.js" defer></script></body>', importPath);
   writeFileSync(importPath, imp);
 

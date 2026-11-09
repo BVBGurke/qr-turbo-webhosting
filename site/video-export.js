@@ -14,9 +14,20 @@
   const formats = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'];
   const availableFormat = () => formats.find(x => MediaRecorder.isTypeSupported(x));
   const readableBytes = size => size >= 1024 * 1024 ? (size / 1048576).toFixed(1) + ' MB' : (size / 1024).toFixed(0) + ' KB';
+  const previewToggle = byId('exportTogglePreview');
+  const previewState = byId('exportPreviewState');
   function updatePreview() {
     viewer?.classList.toggle('preview-hidden', !preview.checked);
+    if (previewToggle) {
+      previewToggle.textContent = preview.checked ? 'Hide preview' : 'Show preview';
+      previewToggle.setAttribute('aria-pressed', String(preview.checked));
+    }
+    viewer?.setAttribute('aria-label', preview.checked ? 'Animated QR preview visible' : 'Animated QR preview hidden; export continues');
   }
+  previewToggle?.addEventListener('click', () => {
+    preview.checked = !preview.checked;
+    updatePreview();
+  });
   preview.addEventListener('change', updatePreview);
   updatePreview();
   function applyPreset() {
@@ -47,6 +58,7 @@
     stop.disabled = true;
     record.disabled = false;
     if (!play.disabled && play.textContent.toLowerCase().includes('pause')) play.click();
+    if (previewState) previewState.textContent = 'Encoding';
     log('Encoding video…');
   }
   record.addEventListener('click', () => {
@@ -69,6 +81,7 @@
       recorder.ondataavailable = event => {if (event.data.size) chunks.push(event.data);};
       recorder.onerror = event => {log('Recording failed: ' + (event.error?.message || 'unknown error'));clearIntervalSafely();cleanupTracks();record.disabled=false;stop.disabled=true;};
       recorder.onstop = () => {
+        if (previewState) previewState.textContent = 'Video ready';
         cleanupTracks();
         clearIntervalSafely();
         if (!chunks.length) {log('No video data was recorded. Try another browser.');return;}
@@ -85,6 +98,7 @@
       startedAt = performance.now();
       progress.value = 0;
       recorder.start(1000);
+      if (previewState) previewState.textContent = 'Recording';
       record.disabled = true;
       stop.disabled = false;
       if (!play.textContent.toLowerCase().includes('pause')) play.click();
@@ -96,6 +110,7 @@
       }, 200);
     } catch (error) {
       cleanupTracks();clearIntervalSafely();record.disabled=false;stop.disabled=true;
+      if (previewState) previewState.textContent = 'Recording failed';
       log('Unable to record video: ' + error.message);
     }
   });

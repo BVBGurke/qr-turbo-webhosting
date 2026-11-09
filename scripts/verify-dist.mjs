@@ -8,6 +8,10 @@ for(const path of ['index.html','send/index.html','receive/index.html','screen/i
 const sender=readFileSync(join(dir,'export/index.html'),'utf8');
 const receiver=readFileSync(join(dir,'import/app.js'),'utf8');
 const home=readFileSync(join(dir,'index.html'),'utf8');
+if(!sender.includes('exportTogglePreview') || !sender.includes('exportPreviewState'))throw new Error('Export preview controls missing');
+const importHtml=readFileSync(join(dir,'import/index.html'),'utf8');
+if(!importHtml.includes('videoImportStage') || !importHtml.includes('importTogglePreview'))throw new Error('Import preview stage missing');
+if(importHtml.indexOf('id="videoImportStage"') > importHtml.indexOf('id="importGraph"'))throw new Error('Import preview stage not near video input');
 if(!sender.includes('exportRecord')||!sender.includes('video-export.js'))throw new Error('Video export UI missing');
 if(!receiver.includes('startLocalVideoImport')||!receiver.includes('QRTurboOnFrame'))throw new Error('Video decoder hook missing');
 if(!home.includes('Video transfer tools'))throw new Error('Video navigation missing');
