@@ -31,13 +31,15 @@
     tiny:{mode:'single',bytes:1003,fps:10,px:2,kbps:260,redundancy:3.6},
     compact:{mode:'single',bytes:1003,fps:12,px:3,kbps:700,redundancy:3.0},
     balanced:{mode:'quad',bytes:1003,fps:12,px:3,kbps:2200,redundancy:2.8},
-    fast:{mode:'quad',bytes:1465,fps:20,px:4,kbps:6000,redundancy:2.6}
+    fast:{mode:'quad',bytes:1465,fps:20,px:4,kbps:6000,redundancy:2.6},
+    grid8:{mode:'octa',bytes:1003,fps:24,px:2,kbps:6500,redundancy:2.5},
+    grid16:{mode:'hexadeca',bytes:1003,fps:20,px:2,kbps:9500,redundancy:2.5}
   });
   const BYTES = n => n >= 1048576 ? (n/1048576).toFixed(2)+' MiB' : n >= 1024 ? (n/1024).toFixed(1)+' KiB' : Math.floor(n)+' B';
   const tiles = new WeakMap();
   const QUIET = 4;
   const MAX_FRAMES=30000;
-  const MODE_PIXELS={single:1,quad:2};
+  const MODE_PIXELS={single:[1,1],quad:[2,2],octa:[4,2],hexadeca:[4,4]};
   let active=false, controller=null, linkUrl=null, meta=null, lastFrame=null, generationStart=0;
   let savedPreparingDisabled=false;
   const setText = t => {if(status)status.textContent=t;};
@@ -46,7 +48,7 @@
   function selectedSettings() {
     let p = profiles[preset.value] || profiles.compact;
     if(preset.value==='custom') {
-      p = {mode:$('exportLayout')?.value==='single'?'single':'quad',
+      p = {mode:['single','quad','octa','hexadeca'].includes($('exportLayout')?.value) ? $('exportLayout').value : 'quad',
         bytes:Number($('exportPayload')?.value)||1003,
         fps:Number($('exportFPS')?.value)||30,
         px:3,kbps:1400,redundancy:3.0};
@@ -67,7 +69,8 @@
     const total=files.reduce((n,f)=>n+f.size,0);
     const packets= m?.k || (files.length ? Math.ceil((total+512)/Math.max(1,p.bytes-20)) : 0);
     if(!packets)return null;
-    const codesPerFrame = p.mode==='quad' ? (p.fps>60 ? 2:4) : 1;
+    const count=({single:1,quad:4,octa:8,hexadeca:16})[p.mode] || 1;
+    const codesPerFrame = p.fps>60&&count>=8?4:p.fps>60&&count===4?2:count;
     return Math.max(12,Math.ceil((packets*p.redundancy)/(p.fps*codesPerFrame) + 5));
   }
   function updateEstimate() {
@@ -75,12 +78,14 @@
     const calculated=estimatedSeconds(meta,p);
     const seconds=durationSelect?.value==='auto' ? calculated : Number(durationSelect?.value);
     const count=lastFrame?.find(Boolean)?.count || (p.bytes<=1003?105:p.bytes<=1273?117:p.bytes<=1465?125:149);
-    const width=(count+QUIET*2)*p.px*(MODE_PIXELS[p.mode]||1);
+    const [columns,rows]=MODE_PIXELS[p.mode]||[1,1];
+    const width=(count+QUIET*2)*p.px*columns;
+    const height=(count+QUIET*2)*p.px*rows;
     const size=seconds ? BYTES(seconds*p.kbps*1000/8):'—';
-    if(estimate)estimate.textContent=width+' × '+width+' pixels · '+p.fps+' FPS · '+p.kbps+' kbps target · '+
+    if(estimate)estimate.textContent=width+' × '+height+' pixels · '+p.fps+' FPS · '+p.kbps+' kbps target · '+
       (seconds?seconds+' seconds':'select a file')+' · estimated '+size+
       ' · generated locally, without realtime recording';
-    return {settings:p,seconds,calculated,width};
+    return {settings:p,seconds,calculated,width,height};
   }
   function tile(pattern) {
     let image=tiles.get(pattern);
@@ -103,11 +108,13 @@
     const first=patterns?.find(Boolean);
     if(!first)throw Error('No QR frames generated');
     lastFrame=patterns;
-    const cols=patterns.length>=4?2:1;
-    const side=(first.count+QUIET*2)*p.px*cols;
-    const even=side+(side%2);
-    if(canvas.width!==even||canvas.height!==even){canvas.width=canvas.height=even;}
-    ctx.imageSmoothingEnabled=false;ctx.fillStyle='#fff';ctx.fillRect(0,0,even,even);
+    const cols=patterns.length>=8?4:patterns.length>=4?2:1;
+    const rows=patterns.length===8?2:cols;
+    const width=(first.count+QUIET*2)*p.px*cols;
+    const height=(first.count+QUIET*2)*p.px*rows;
+    const evenWidth=width+(width%2),evenHeight=height+(height%2);
+    if(canvas.width!==evenWidth||canvas.height!==evenHeight){canvas.width=evenWidth;canvas.height=evenHeight;}
+    ctx.imageSmoothingEnabled=false;ctx.fillStyle='#fff';ctx.fillRect(0,0,evenWidth,evenHeight);
     const tileSide=(first.count+QUIET*2)*p.px;
     for(let i=0;i<patterns.length;i++){
       const item=patterns[i];if(!item)continue;
@@ -212,7 +219,8 @@
       const p=selectedSettings();
       const seconds=estimateInfo.seconds;
       if(!seconds||!Number.isFinite(seconds)||seconds>900)throw Error('Invalid video duration. Limit: 15 minutes.');
-      const coverage=p.mode==='quad'?(p.fps>60?2:4):1;
+      const codeCount=({single:1,quad:4,octa:8,hexadeca:16})[p.mode]||1;
+      const coverage=p.fps>60&&codeCount>=8?4:p.fps>60&&codeCount===4?2:codeCount;
       const minSeconds=Math.ceil(meta.k/(p.fps*coverage))+1;
       if(seconds<minSeconds)throw Error('Video duration is too short to include the whole file. Choose Auto or a longer duration.');
       const frames=Math.ceil(seconds*p.fps);

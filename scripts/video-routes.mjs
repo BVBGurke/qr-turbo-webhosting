@@ -98,6 +98,8 @@ export function addVideoRoutes(output) {
         <option value="compact" selected>Compact · recommended</option>
         <option value="balanced">Balanced · four QR codes</option>
         <option value="fast">Faster · larger video</option>
+        <option value="grid8">Turbo V2 · 8 QR codes</option>
+        <option value="grid16">Extreme · 16 QR codes</option>
         <option value="custom">Custom · choose layout / FPS</option>
       </select></label>
       <label>Video duration<select id="exportDuration">
@@ -106,10 +108,10 @@ export function addVideoRoutes(output) {
       </select></label>
     </div>
     <div class="video-field-grid" id="exportCustomSettings" hidden>
-      <label>QR code layout<select id="exportLayout"><option value="quad" selected>Four QR codes</option><option value="single">One QR code</option></select></label>
+      <label>QR code layout<select id="exportLayout"><option value="quad" selected>Four QR codes</option><option value="octa">Eight QR codes · V2</option><option value="hexadeca">Sixteen QR codes · V2</option><option value="single">One QR code</option></select></label>
       <label>QR video frame rate<select id="exportFPS"><option value="10">10 FPS</option><option value="12">12 FPS</option><option value="15">15 FPS</option><option value="20">20 FPS</option><option value="24">24 FPS</option><option value="30" selected>30 FPS</option><option value="50">50 FPS</option><option value="60">60 FPS</option><option value="90">90 FPS</option><option value="120">120 FPS · experimental</option></select></label>
       <label>Payload per QR code<select id="exportPayload"><option value="1003">1003 bytes</option><option value="1273">1273 bytes</option><option value="1465" selected>1465 bytes</option><option value="1732">1732 bytes</option><option value="1952">1952 bytes</option><option value="2068">2068 bytes</option></select></label>
-      <p class="video-warning">Four QR codes at 120 FPS is supported for export, but some decoders and displays skip frames. Test your video with Import Video.</p>
+      <p class="video-warning">Turbo V2: 8 and 16 QR codes are supported. At 90/120 FPS, only four tiles change per video frame. Use high-resolution video, a capable decoder, and enough device memory. Test the result in Import Video.</p>
     </div>
     <details class="video-settings"><summary>Advanced compression</summary>
       <div class="video-field-grid">
