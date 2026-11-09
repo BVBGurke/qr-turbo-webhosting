@@ -75,8 +75,8 @@ const senderEdits=[
     "    if (layout === \"quad\" && hz < 90) cap = Math.min(cap, 30);\n    if (layout === \"octa\" || layout === \"hexadeca\") cap = Math.min(cap, 30);"
   ],
   [
-    "    if (rate.codes === 2) text += \"。双码只占 2×2 上排。",
-    "    if (rate.codes >= 8) text += \" · Turbo V2 \" + rate.codes + \"-code grid. 90/120 FPS updates banks of four. Receiver, resolution and refresh rate determine actual throughput.\";\n    if (rate.codes === 2) text += \"。双码只占 2×2 上排。"
+    "    rateHint.textContent = text;",
+    "    if (rate.codes >= 8) text += \" · Turbo V2 \" + rate.codes + \"-code grid. High FPS updates groups of four. Physical resolution and decoder throughput limit the real rate.\";\n    rateHint.textContent = text;"
   ],
   [
     "      if (quadRefreshesAll()) {\n        await waitForQueueDepth(1);",
