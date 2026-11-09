@@ -51,7 +51,7 @@ async function exportTest(page,mode,preset,software){
   // Preset buttons intentionally keep the advanced controls collapsed.
   // Expand the panel before testing CPU/GPU and headless configuration.
   if(!(await page.locator('#exportAdvancedSettings').evaluate(el=>el.open))){
-    await page.locator('#exportAdvancedSettings summary').click();
+    await page.locator('#exportAdvancedSettings > summary').click();
   }
   if(software) await page.locator('#exportUseGPU').uncheck();
   await page.locator('#exportHeadless').check();
