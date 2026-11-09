@@ -27,3 +27,5 @@ jobs:
         run: npm install --no-save --no-package-lock --ignore-scripts playwright-core
       - name: Browser E2E — actual QR export and WebM decoding
         run: node scripts/test-browser-export.mjs
+      - name: Browser E2E — camera controls with simulated video track
+        run: node scripts/test-camera-browser.mjs

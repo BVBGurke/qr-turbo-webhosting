@@ -1,0 +1,86 @@
+/* Real Chromium camera-UX smoke test with a simulated camera feed.
+ * Hardware zoom, multi-lens and torch support cannot be emulated reliably;
+ * this test verifies capability gating, camera lifecycle and mobile layout.
+ */
+import assert from 'node:assert/strict';
+import {spawn} from 'node:child_process';
+import {chromium} from 'playwright-core';
+const port=18973,origin='http://127.0.0.1:'+port;
+const server=spawn('python3',['-m','http.server',String(port),'--bind','127.0.0.1','--directory','dist'],{stdio:'pipe'});
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+let browser;
+async function ready(){
+  for(let i=0;i<50;i++){try{if((await fetch(origin+'/')).ok)return;}catch{}await sleep(150);}
+  throw Error('Camera test server not ready');
+}
+async function test(viewport){
+  const ctx=await browser.newContext({
+    viewport,
+    permissions:['camera'],
+    ...((viewport.width<650)?{isMobile:true,hasTouch:true,deviceScaleFactor:2}:{})
+  });
+  const page=await ctx.newPage(),errors=[];
+  page.on('pageerror',e=>errors.push(String(e)));
+  await page.goto(origin+'/receive/',{waitUntil:'load'});
+  assert.ok(await page.locator('#cameraStudio').isVisible());
+  assert.ok(await page.locator('#cameraSimpleBtn').getAttribute('aria-pressed')==='true');
+  assert.equal(await page.locator('#cameraAdvanced').isVisible(),false);
+  const mapping=await page.evaluate(()=>({
+    ultra:window.QRTurboCamera.cameraRole('Back Ultra Wide Camera').id,
+    front:window.QRTurboCamera.cameraRole('Front Camera').id,
+    tele:window.QRTurboCamera.cameraRole('Back Telephoto Camera').id,
+    unknown:window.QRTurboCamera.cameraRole('Camera 2').id
+  }));
+  assert.deepEqual(mapping,{ultra:'ultra',front:'front',tele:'tele',unknown:'unknown'});
+  await page.locator('#cameraAdvancedBtn').click();
+  assert.equal(await page.locator('#cameraAdvanced').isVisible(),true);
+  assert.ok(await page.locator('#cameraDeviceMap').count());
+  assert.ok(await page.locator('#cameraAdvancedFps #fps60').count());
+  assert.ok(await page.locator('#cameraAdvancedFps #turboGridMode').count());
+  await page.locator('#cameraSimpleBtn').click();
+  assert.equal(await page.locator('#cameraAdvanced').isVisible(),false);
+  // Real browser start: the fake camera still produces a MediaStreamTrack.
+  await page.locator('#startBtn').click();
+  await page.waitForFunction(()=>window.QRTurboCameraBridge?.isRunning() &&
+    document.getElementById('video').readyState>=2,{timeout:20000});
+  await page.waitForFunction(()=>document.getElementById('cameraActualResolution')?.textContent.includes('×'),{timeout:10000});
+  const capabilities=await page.evaluate(()=>({
+    track:window.QRTurboCameraBridge.track()?.readyState,
+    cameras:document.getElementById('cameraDevice').options.length,
+    selected:document.getElementById('cameraDevice').selectedOptions[0]?.textContent,
+    exposedHardware:window.QRTurboCamera.state.caps,
+    torchDisabled:document.getElementById('cameraTorch').disabled,
+    zoomDisabled:document.getElementById('cameraZoom').disabled
+  }));
+  assert.equal(capabilities.track,'live');
+  assert.ok(capabilities.cameras>=1);
+  await page.locator('#cameraAdvancedBtn').click();
+  if(capabilities.zoomDisabled)assert.ok(await page.locator('#cameraZoom').isDisabled());
+  if(capabilities.torchDisabled)assert.ok(await page.locator('#cameraTorch').isDisabled());
+  await page.locator('#cameraFlip').click();
+  await page.waitForFunction(()=>window.QRTurboCameraBridge?.isRunning(),{timeout:20000});
+  const docWidth=await page.evaluate(()=>({
+    scroll:document.documentElement.scrollWidth,client:document.documentElement.clientWidth,
+    stage:document.querySelector('.camera-card')?.getBoundingClientRect()?.width
+  }));
+  assert.ok(docWidth.scroll-docWidth.client<10,'Camera page horizontally overflows: '+JSON.stringify(docWidth));
+  await page.locator('#stopBtn').click();
+  await page.waitForFunction(()=>!window.QRTurboCameraBridge.isRunning(),{timeout:5000});
+  assert.equal(errors.length,0,'Uncaught camera errors: '+errors.join('; '));
+  console.log(JSON.stringify({viewport,permission:'granted',stream:'started/stopped',cameras:capabilities.cameras,
+    zoomSupported:!capabilities.zoomDisabled,torchSupported:!capabilities.torchDisabled,
+    scrollWidth:docWidth.scroll,clientWidth:docWidth.client,jsErrors:errors}));
+  await ctx.close();
+}
+try{
+  await ready();
+  browser=await chromium.launch({
+    headless:true,channel:'chrome',
+    args:['--no-sandbox','--use-fake-ui-for-media-stream','--use-fake-device-for-media-stream',
+      '--disable-dev-shm-usage']
+  });
+  await test({width:1280,height:850});
+  await test({width:390,height:844});
+  console.log('PASS: Camera Studio Simple/Advanced, device roles, permissions, start/stop, lens switch, mobile sizing.');
+}catch(e){console.error('CAMERA E2E FAILED:',e.stack||e);process.exitCode=1;}
+finally{await browser?.close().catch(()=>{});server.kill('SIGTERM');}

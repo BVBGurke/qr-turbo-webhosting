@@ -101,3 +101,19 @@ if(!videoCode.includes('grid8')||!videoCode.includes('grid16')||!videoCode.inclu
 console.log('Turbo V2 layout, receiver, and offline-video checks passed.');
 
 if (!sender.includes('layoutCodes: codesPerScreen,')) throw Error('Sender optical header must advertise the actual 8/16 tile count');
+
+for(const asset of ['camera-controls.js','camera-controls.css']){
+  if(!existsSync(join(dir,asset)))throw new Error('Missing Camera Studio asset: '+asset);
+}
+const cameraPage=readFileSync(join(dir,'receive/index.html'),'utf8');
+const cameraApp=readFileSync(join(dir,'receive/app.js'),'utf8');
+for(const token of ['id="cameraStudio"','id="cameraSimpleBtn"','id="cameraAdvancedBtn"',
+  'id="cameraDevice"','id="cameraExposure"','id="cameraFocusMode"','id="cameraTorch"',
+  'data-lens="0.5"','data-lens="2"','camera-controls.js','camera-controls.css']){
+  if(!cameraPage.includes(token))throw new Error('Missing camera UX: '+token);
+}
+for(const token of ['QRTurboCamera?.constraints','QRTurboCamera?.onTrack','QRTurboCameraBridge',
+  'Existing received data preserved']){
+  if(!cameraApp.includes(token))throw new Error('Missing scanner integration: '+token);
+}
+console.log('Camera Studio wired into live scanner and permission-aware controls.');
