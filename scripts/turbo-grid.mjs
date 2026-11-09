@@ -93,6 +93,10 @@ const senderEdits=[
   [
     "    frameText.textContent = codesPerScreen === 4\n",
     "    frameText.textContent = codesPerScreen >= 8 ? codesPerScreen + \" codes · \" + emitted + \" / \" + transfer.total + \" blocks\" : codesPerScreen === 4\n"
+  ],
+  [
+    "          layoutCodes: codesPerScreen === 1 ? 1 : codesPerScreen === 2 ? 2 : 4,",
+    "          layoutCodes: codesPerScreen, // V1: 1/2/4, V2: 8/16"
   ]
 ];
 export function addTurboGrid(output) {

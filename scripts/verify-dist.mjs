@@ -78,3 +78,5 @@ if(!sender.includes('QRTurboOfflineFrames'))throw Error('No offline packet itera
 const videoCode=readFileSync(join(dir,'video-export.js'),'utf8');
 if(!videoCode.includes('grid8')||!videoCode.includes('grid16')||!videoCode.includes("hexadeca"))throw Error('Turbo Grid offline video profiles missing');
 console.log('Turbo V2 layout, receiver, and offline-video checks passed.');
+
+if (!sender.includes('layoutCodes: codesPerScreen,')) throw Error('Sender optical header must advertise the actual 8/16 tile count');
