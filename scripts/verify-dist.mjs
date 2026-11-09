@@ -120,3 +120,17 @@ console.log('Camera Studio wired into live scanner and permission-aware controls
 
 if(!cameraPage.includes('id="cameraQualityHint"')||!cameraPage.includes('id="cameraAutoExposure"'))throw new Error('Camera quality feedback UI is missing');
 if(!cameraApp.includes('QRTurboCamera.request({'))throw new Error('Missing fallback camera acquisition');
+
+for(const asset of ['camera-viewer.js','camera-viewer.css']){
+  if(!existsSync(join(dir,asset)))throw Error('Missing fullscreen asset: '+asset);
+}
+if(!cameraPage.includes('camera-viewer.js')||!cameraPage.includes('camera-viewer.css'))
+  throw Error('Camera viewer assets are not linked');
+if(!cameraPage.includes('id="cameraResolution"')||!cameraPage.includes('id="cameraExperimental120"'))
+  throw Error('Camera resolution settings are missing');
+for(const layout of ['value="1"','value="4"','value="8"','value="16"']){
+  if(!cameraPage.includes(layout))throw Error('Missing scanner layout: '+layout);
+}
+if(!cameraApp.includes('qr-turbo:scan-hit')||!cameraApp.includes('preferHighFps'))
+  throw Error('Decoded QR overlays or camera FPS gating are missing');
+console.log('Camera fullscreen, QR layouts and decoder overlay integration validated.');

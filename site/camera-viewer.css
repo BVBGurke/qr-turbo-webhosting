@@ -1,0 +1,74 @@
+/* QR Turbo fullscreen camera UI: keeps the complete camera sensor visible. */
+body.oil-app main.app .camera-card{position:relative!important;overflow:hidden!important;background:#000!important;
+  height:clamp(340px,57dvh,750px);aspect-ratio:auto!important;display:block!important}
+body.oil-app main.app .camera-card>video,
+body.oil-app main.app .camera-card>.camera-freeze{position:absolute!important;inset:0!important;
+ width:100%!important;height:100%!important;object-fit:contain!important;background:#000!important}
+body.oil-app main.app .camera-card>#scanCanvas{display:none!important}
+.camera-stage-ui{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:space-between;
+  pointer-events:none;z-index:15;color:#ecf9e8;font-family:Inter,system-ui,sans-serif}
+.camera-stage-ui__top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;
+  padding:14px 14px 8px;background:linear-gradient(#000b,transparent)}
+.camera-stage-ui__live{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 10px;
+  background:#0b1716e5;border:1px solid #45694a;border-radius:10px;font-size:10px;
+  font-weight:750;letter-spacing:.04em}
+.camera-stage-details{color:#b9d5c2;font:500 10px ui-monospace,monospace;letter-spacing:0}
+.camera-live-dot{width:7px;height:7px;border-radius:50%;background:#779a82}
+.camera-live-dot.active{background:#bff17b;box-shadow:0 0 14px #c8f56f8c}
+.camera-stage-ui__top-right{display:flex;gap:7px;pointer-events:auto}
+body.oil-app .camera-stage-btn{min-height:42px!important;padding:9px 12px!important;
+ background:#0c1b17e8!important;color:#edf9e7!important;border:1px solid #60816a!important;
+ border-radius:11px!important;font-size:12px!important;font-weight:760!important;backdrop-filter:blur(8px)}
+body.oil-app .camera-stage-btn:hover{background:#294a33!important;border-color:#c8f56f!important}
+body.oil-app .camera-stage-btn:disabled{opacity:.45!important}
+.camera-stage-ui__bottom{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;
+ padding:14px;background:linear-gradient(transparent,#000b)}
+.camera-stage-ui__stats{min-height:32px;max-width:47%;display:flex;align-items:center;background:#071611d9;
+ border:1px solid #46654e;border-radius:9px;padding:7px 10px;color:#d9f6d2;font-size:11px;line-height:1.4}
+.camera-stage-ui__actions{pointer-events:auto;display:flex;gap:6px;align-items:center;justify-content:flex-end}
+.camera-detection-overlay{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;
+ pointer-events:none;z-index:5}
+.camera-detection-box{fill:#bff17b1c;stroke:#c8f56f;stroke-width:3;filter:drop-shadow(0 0 6px #000c)}
+/* Keep existing lens controls visible in normal and fullscreen mode. */
+body.oil-app .camera-card .camera-preview-overlay{z-index:10!important;padding-bottom:78px!important}
+body.oil-app .camera-card .camera-hint{z-index:2!important}
+body.oil-app .camera-card.camera-stage--fullscreen,
+body.oil-app .camera-card:fullscreen{position:fixed!important;inset:0!important;top:0!important;left:0!important;
+ width:100vw!important;width:100dvw!important;height:100vh!important;height:100dvh!important;
+ min-height:0!important;max-height:none!important;aspect-ratio:auto!important;margin:0!important;
+ z-index:99999!important;border:0!important;border-radius:0!important;box-shadow:none!important;background:#000!important}
+body.camera-fullscreen-mode{overflow:hidden!important}
+html.camera-fullscreen-scrolllock{overflow:hidden!important}
+.camera-stage--fullscreen .camera-stage-ui__top,.camera-card:fullscreen .camera-stage-ui__top{
+ padding:calc(12px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) 8px
+ calc(12px + env(safe-area-inset-left))}
+.camera-stage--fullscreen .camera-stage-ui__bottom,.camera-card:fullscreen .camera-stage-ui__bottom{
+ padding:14px calc(12px + env(safe-area-inset-right)) calc(17px + env(safe-area-inset-bottom))
+ calc(12px + env(safe-area-inset-left))}
+.camera-stage--fullscreen .camera-preview-overlay,
+.camera-card:fullscreen .camera-preview-overlay{padding-bottom:94px!important}
+.camera-stage--fullscreen .camera-stage-ui__stats,.camera-card:fullscreen .camera-stage-ui__stats{
+ max-width:min(36vw,500px)}
+@media(max-width:650px){
+ body.oil-app main.app .camera-card{height:min(67dvh,660px)!important;min-height:380px!important;
+  max-height:none!important;aspect-ratio:auto!important;border-radius:13px!important}
+ body.oil-app main.app .camera-card.camera-stage--fullscreen,
+ body.oil-app main.app .camera-card:fullscreen{height:100dvh!important;min-height:0!important;
+   max-height:none!important;border-radius:0!important}
+ .camera-stage-ui__top{padding:9px 8px}
+ .camera-stage-ui__bottom{padding:9px 8px;flex-direction:column;align-items:stretch}
+ .camera-stage-ui__stats{max-width:100%;width:100%;font-size:10px}
+ .camera-stage-ui__actions{width:100%;justify-content:space-between}
+ body.oil-app .camera-stage-ui__actions .camera-stage-btn{flex:1;min-width:0;padding:8px 5px!important;font-size:11px!important}
+ body.oil-app .camera-card .camera-preview-overlay{padding-bottom:114px!important}
+ .camera-viewfinder-hint{font-size:10px}
+ .camera-stage-ui__live{padding:7px;font-size:9px}
+ body.oil-app #cameraFullscreen{min-height:40px!important;white-space:nowrap}
+ body.oil-app .camera-card.camera-stage--fullscreen .camera-preview-overlay{padding-bottom:128px!important}
+}
+@media(max-width:360px){
+ .camera-stage-details{display:none}
+ body.oil-app .camera-stage-ui__actions .camera-stage-btn{font-size:10px!important}
+ .camera-stage-ui__bottom{padding:7px}
+}
+@media(prefers-reduced-motion:reduce){.camera-detection-box{filter:none}}
