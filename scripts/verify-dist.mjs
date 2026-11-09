@@ -41,3 +41,8 @@ const offline=readFileSync(join(dir,'video-export.js'),'utf8');
 if(!offline.includes('VideoEncoder')||!offline.includes('WebMWriter')||offline.includes('new MediaRecorder'))throw new Error('Offline WebCodecs encoder not configured');
 if(!existsSync(join(dir,'webm-writer.js')))throw new Error('Missing WebM writer');
 console.log('Offline video generation and custom 4 QR 120 FPS verified.');
+
+const importerUI=readFileSync(join(dir,'import/index.html'),'utf8');
+if(!importerUI.includes('videoImportSpeed'))throw new Error('High-FPS import speed control missing');
+if(!readFileSync(join(dir,'video-import.js'),'utf8').includes('playbackRate = speed'))throw new Error('Import analysis speed not wired');
+console.log('Video import playback speed control verified.');

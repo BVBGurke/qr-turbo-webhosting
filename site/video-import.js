@@ -3,6 +3,7 @@
   const $ = id => document.getElementById(id);
   const video = $('video'), start = $('videoImportStart'), stop = $('videoImportStop');
   const videoFile = $('videoImportFile'), visibility = $('videoImportPreview');
+  const speedSelect = $('videoImportSpeed');
   const fileInfo = $('videoImportInfo'), time = $('importTime'), videoProgress = $('importVideoProgress');
   const count = $('importPackets'), bytes = $('importBytes'), blocks = $('importBlocks');
   const logEl = $('videoDataLog'), logCount = $('logCount'), graph = $('importGraph');
@@ -45,6 +46,12 @@
   });
   visibility.addEventListener('change',showPreview);
   showPreview();
+  function applySpeed() {
+    const speed = Number(speedSelect?.value) || 1;
+    video.playbackRate = speed;
+    if (active) log('Analysis playback rate: ' + speed + '×');
+  }
+  speedSelect?.addEventListener('change', applySpeed);
   videoFile.addEventListener('change', () => {
     const f=videoFile.files?.[0];
     fileInfo.textContent=f ? f.name+' · '+fmtSize(f.size)+' · '+(f.type || 'video file') : 'No video selected.';
@@ -57,6 +64,7 @@
   start.addEventListener('click', () => {
     if(!videoFile.files?.[0])return;
     resetCounters();active=true;
+    applySpeed();
     start.disabled=true;stop.disabled=false;
     setPreviewState('Starting analysis');
     log('Starting local video analysis. No data is uploaded.');

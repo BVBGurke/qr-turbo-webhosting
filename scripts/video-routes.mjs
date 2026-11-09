@@ -154,6 +154,11 @@ export function addVideoRoutes(output) {
     <div class="video-options">
       
       <label class="video-check"><input type="checkbox" id="videoLoop" checked> Loop for missed QR frames</label>
+      <label class="video-speed-control">Analysis speed<select id="videoImportSpeed">
+        <option value="0.5">0.5× · for high-FPS videos</option>
+        <option value="1" selected>1× · normal</option>
+        <option value="2">2× · fast (may skip codes)</option>
+      </select></label>
     </div>
     <div class="video-buttons">
       <button type="button" id="videoImportStart">Analyze video</button>
