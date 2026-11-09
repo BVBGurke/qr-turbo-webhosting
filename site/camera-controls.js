@@ -358,12 +358,12 @@
     torchOn=false;torch.setAttribute('aria-pressed','false');torch.textContent='Flashlight';
     note('Camera controls reset.');
   });
-  // The scanner's existing FPS and grid controls retain their original IDs.
+  // The QR layout stays visible in Simple mode, unlike camera FPS diagnostics.
+  const modePicker=document.querySelector('main.app > .actions .turbo-grid-picker');
+  if(modePicker)$('cameraStudio')?.querySelector('.camera-camera-row')?.insertAdjacentElement('beforebegin',modePicker);
   const advancedFps=$('cameraAdvancedFps');
-  for(const selector of ['.turbo-grid-picker','.fps-switch']){
-    const el=document.querySelector('main.app > .actions '+selector);
-    if(el&&advancedFps)advancedFps.append(el);
-  }
+  const fpsSwitch=document.querySelector('main.app > .actions .fps-switch');
+  if(fpsSwitch&&advancedFps)advancedFps.append(fpsSwitch);
   navigator.mediaDevices?.addEventListener?.('devicechange',()=>void listCameras());
   async function request(media){
     if(!navigator.mediaDevices?.getUserMedia)throw Error('Camera requires HTTPS or localhost.');
