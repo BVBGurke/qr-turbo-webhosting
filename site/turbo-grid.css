@@ -1,0 +1,19 @@
+/* QR Turbo V2 — high-density mode controls, touch-first layout. */
+.turbo-presets{display:grid;gap:11px;padding:15px;border:1px solid #446045;border-radius:14px;background:linear-gradient(150deg,#1b2f24,#11231e);box-shadow:inset 0 1px 0 #b4ff7811}
+.turbo-presets-heading{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.turbo-presets-heading b{font:800 10px/1.4 ui-monospace,monospace;letter-spacing:.1em;color:#d4ff90}
+.turbo-presets-heading span{font-size:11px;color:#a2bc9e}
+.turbo-presets-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+body.oil-app .turbo-presets-grid button{display:flex;align-items:center;justify-content:center;text-align:center;padding:10px 8px;min-height:48px;border:1px solid #546b56!important;border-radius:10px!important;background:#111e1a!important;color:#d7e7d6!important;font-size:11px;font-weight:760;line-height:1.35;cursor:pointer;white-space:normal;transition:background .15s,border-color .15s,transform .15s}
+body.oil-app .turbo-presets-grid button:hover{border-color:#bbf588!important;background:#274032!important}
+body.oil-app .turbo-presets-grid button:focus-visible{outline:2px solid #d4ff90;outline-offset:2px}
+body.oil-app .turbo-presets-grid button[aria-pressed=true]{border-color:#c8f56f!important;background:#324e29!important;color:#edffd0!important}
+body.oil-app .turbo-presets-grid button:last-child{grid-column:span 2;background:#c8f56f!important;color:#132012!important;border-color:#c8f56f!important}
+body.oil-app .turbo-presets-grid button:last-child:hover{background:#e1ffaf!important}
+.turbo-profile-info{font-size:11px;line-height:1.6;min-height:2.2em;color:#a8c8ae;margin:0}
+.turbo-grid-picker{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:740;color:#ccdec9;padding:7px 10px;background:#1b3025;border:1px solid #4a664c;border-radius:10px;min-height:44px}
+body.oil-app .turbo-grid-picker select{width:auto;min-width:136px;max-width:205px;min-height:34px!important;margin:0;padding:5px 25px 5px 8px;background:#10221a!important;color:#f0ffe8!important;border:1px solid #526952!important;font-size:12px}
+body.oil-app .controls .control-card{transition:border-color .18s}
+body.oil-app .turbo-advanced[open]{border-color:#698c69!important}
+@media(max-width:760px){.turbo-presets{padding:12px}.turbo-presets-grid{gap:6px}body.oil-app .turbo-presets-grid button{min-height:49px;font-size:11px;padding:8px 5px}.turbo-grid-picker{width:100%;justify-content:space-between}.turbo-grid-picker select{flex:1;width:auto!important}.oil-app main.app .actions{display:flex!important;flex-wrap:wrap!important}.oil-app main.app .actions .fps-switch{flex:1 1 auto!important;min-width:190px}}
+@media(prefers-reduced-motion:reduce){body.oil-app .turbo-presets-grid button{transition:none!important}}
