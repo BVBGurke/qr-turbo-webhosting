@@ -19,7 +19,7 @@ if(!importHtml.includes('videoImportStage') || !importHtml.includes('importToggl
 if(importHtml.indexOf('id="videoImportStage"') > importHtml.indexOf('id="importGraph"'))throw new Error('Import preview stage not near video input');
 if(!sender.includes('exportRecord')||!sender.includes('video-export.js'))throw new Error('Video export UI missing');
 if(!receiver.includes('startLocalVideoImport')||!receiver.includes('QRTurboOnFrame'))throw new Error('Video decoder hook missing');
-if(!home.includes('Video transfer tools'))throw new Error('Video navigation missing');
+if(!home.includes('href="send/#videoExportPanel"') || !home.includes('href="import/"'))throw new Error('Video navigation missing');
 if(sender.includes('https://shuipashui.github.io/beamferry/";'))throw new Error('Sender URL not self-hosted');
 console.log('Static build checks passed: routes, source hooks, and video navigation.');
 
