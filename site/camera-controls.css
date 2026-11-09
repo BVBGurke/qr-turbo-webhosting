@@ -1,0 +1,50 @@
+/* Camera Studio: hardware-aware mobile scanning, not cosmetic focus/brightness sliders. */
+.camera-studio{display:grid;gap:12px;margin:14px 0 18px;padding:16px;background:linear-gradient(140deg,#182d26,#12251f);border:1px solid #496c53;border-radius:16px}
+.camera-studio__header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
+.camera-studio__header strong{font-size:17px;color:#eaf6e6;letter-spacing:-.035em}
+.camera-studio__header small{color:#b0cbb7;font-size:11px}
+.camera-mode-tabs{display:inline-flex;gap:4px;align-items:center;padding:4px;border:1px solid #44654d;background:#101f1b;border-radius:12px}
+body.oil-app .camera-mode-tabs button{padding:8px 13px!important;min-height:37px!important;font-size:12px!important;font-weight:760!important;background:transparent!important;color:#a9bfac!important;border:1px solid transparent!important;border-radius:9px!important;box-shadow:none!important}
+body.oil-app .camera-mode-tabs button[aria-pressed=true]{background:#c8f56f!important;color:#102018!important}
+.camera-camera-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:9px;align-items:end}
+.camera-field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.camera-field>span{color:#b5cdbb;font-size:12px;font-weight:730}
+body.oil-app .camera-field select{width:100%;min-width:0;min-height:45px!important;margin:0!important;padding:9px 30px 9px 11px!important;background:#101e1a!important;color:#e4f4e3!important;border:1px solid #4b6d56!important;border-radius:10px!important}
+body.oil-app .camera-row-button{min-height:45px!important;min-width:45px;padding:9px 11px!important;background:#203b2b!important;color:#e5f5de!important;border:1px solid #4d7357!important;border-radius:10px!important}
+body.oil-app .camera-row-button:hover{border-color:#c8f56f!important}
+.camera-studio-status{font-size:12px;line-height:1.55;min-height:18px;color:#bdd9bf;margin:0}
+.camera-studio-status[data-warning=true]{color:#ffca9d}
+.camera-preview-overlay{position:absolute;inset:0;pointer-events:none;z-index:3;display:flex;flex-direction:column;justify-content:space-between;align-items:center;padding:15px 12px}
+.camera-viewfinder-hint{font:650 11px/1.4 Inter,system-ui,sans-serif;color:#e3f4dd;padding:7px 12px;border-radius:22px;background:#071a15bb;backdrop-filter:blur(7px);max-width:calc(100% - 25px);text-align:center}
+.camera-lens-buttons{display:flex;gap:6px;pointer-events:auto;justify-content:center;padding:6px;border-radius:32px;background:#071c17e8;border:1px solid #50755d;box-shadow:0 8px 25px #0006}
+body.oil-app .camera-lens-buttons button{min-width:45px;min-height:43px!important;padding:7px 11px!important;background:transparent!important;color:#e8f9e6!important;border:1px solid transparent!important;border-radius:23px!important;font-size:13px!important;font-weight:770!important}
+body.oil-app .camera-lens-buttons button[aria-pressed=true]{background:#c8f56f!important;color:#102218!important}
+body.oil-app .camera-lens-buttons button:disabled{opacity:.36!important}
+.camera-focus-marker{position:absolute;width:66px;height:66px;border:2px solid #c8f56f;border-radius:13px;transform:translate(-50%,-50%);box-shadow:0 0 0 2px #0a161c77;pointer-events:none;z-index:8}
+.camera-focus-marker[hidden]{display:none!important}
+.camera-focus-pulse{animation:camera-focus .65s ease-out}
+@keyframes camera-focus{from{transform:translate(-50%,-50%) scale(1.3);opacity:.3}to{transform:translate(-50%,-50%) scale(1);opacity:1}}
+.camera-advanced{padding:17px;border:1px solid #395645;background:#10201c;border-radius:14px;display:grid;gap:15px}
+.camera-advanced[hidden]{display:none!important}
+.camera-advanced h3{font-size:16px;letter-spacing:-.025em;margin:0;color:#e9f7e6}
+.camera-setting-group{display:grid;gap:11px}
+.camera-range-row{display:grid;grid-template-columns:1fr auto;gap:6px 13px;align-items:center}
+.camera-range-row label{font-size:12px;color:#cadfc9;font-weight:700}
+.camera-range-row output{font-size:11px;color:#d2fab0;font-family:ui-monospace,monospace}
+.camera-range-row input[type=range]{grid-column:1/-1;width:100%;margin:0;accent-color:#c8f56f;min-height:24px}
+.camera-setting-tip{font-size:11px;color:#a7c3af;line-height:1.6;margin:0}
+.camera-advanced-actions{display:flex;gap:9px;flex-wrap:wrap}
+body.oil-app .camera-advanced-actions button{min-height:43px!important;background:#223c2e!important;border:1px solid #527255!important;color:#e7f8e3!important;font-size:12px!important}
+.camera-map{border-top:1px solid #33523e;padding-top:12px}
+.camera-map summary{font-size:12px;font-weight:720;color:#c9f7aa;cursor:pointer}
+.camera-map p{color:#a5bca9;font-size:11px;line-height:1.5;margin:11px 0}
+.camera-map-entry{display:flex;flex-direction:column;gap:4px;padding:9px 0;border-bottom:1px solid #294739}
+.camera-map-entry strong{font-size:12px;color:#dfefdb;overflow-wrap:anywhere}
+.camera-map-entry small{font-size:11px;color:#a9bea9;overflow-wrap:anywhere}
+.camera-preview-live-label{color:#b1c4b2;font-size:11px;padding:3px 0}
+body.oil-app .camera-card video{cursor:crosshair!important}
+body.oil-app main.app .camera-card{background:#081611!important;min-height:min(65dvh,540px)}
+body.oil-app main.app .camera-card video{object-fit:contain!important}
+body.oil-app #cameraTorch:disabled,body.oil-app #cameraRefocus:disabled{opacity:.45!important}
+@media(max-width:620px){.camera-studio{margin:9px 0 12px;padding:12px;gap:11px}.camera-studio__header{align-items:stretch}.camera-studio__header strong{font-size:15px}.camera-mode-tabs{margin-left:auto}.camera-camera-row{grid-template-columns:minmax(0,1fr) 44px}.camera-camera-row #cameraRefreshDevices{display:none}.camera-studio .camera-field{grid-column:1}.camera-preview-overlay{padding:10px 7px}.camera-lens-buttons{padding:4px}.camera-viewfinder-hint{font-size:10px;max-width:91%}.camera-advanced{padding:13px}.camera-focus-marker{width:50px;height:50px}body.oil-app main.app .camera-card{min-height:50dvh;max-height:65dvh;aspect-ratio:4/3}}
+@media(prefers-reduced-motion:reduce){.camera-focus-pulse{animation:none}}
