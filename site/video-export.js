@@ -1,119 +1,321 @@
 (() => {
   'use strict';
-  const byId = id => document.getElementById(id);
-  const canvas = byId('qrCanvas');
-  const viewer = canvas?.closest('.viewer');
-  const record = byId('exportRecord'), stop = byId('exportStop');
-  const prepare = byId('prepareBtn'), play = byId('playBtn');
-  const status = byId('exportStatus'), progress = byId('exportProgress');
-  const download = byId('exportDownload'), preview = byId('exportPreview');
-  const duration = byId('exportDuration'), preset = byId('exportPreset');
-  if (!canvas || !record || !prepare || !play) return;
-  let recorder, mediaStream, chunks = [], startedAt = 0, interval = 0, maxSeconds = 60, lastUrl = null;
-  const log = message => { status.textContent = message; };
-  const formats = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'];
-  const availableFormat = () => formats.find(x => MediaRecorder.isTypeSupported(x));
-  const readableBytes = size => size >= 1024 * 1024 ? (size / 1048576).toFixed(1) + ' MB' : (size / 1024).toFixed(0) + ' KB';
-  const previewToggle = byId('exportTogglePreview');
-  const previewState = byId('exportPreviewState');
-  function updatePreview() {
-    viewer?.classList.toggle('preview-hidden', !preview.checked);
-    if (previewToggle) {
-      previewToggle.textContent = preview.checked ? 'Hide preview' : 'Show preview';
-      previewToggle.setAttribute('aria-pressed', String(preview.checked));
-    }
-    viewer?.setAttribute('aria-label', preview.checked ? 'Animated QR preview visible' : 'Animated QR preview hidden; export continues');
+  const $ = id => document.getElementById(id);
+  const videoCanvas = $('exportEncodedPreview');
+  const liveCanvas = $('qrCanvas');
+  const liveViewer = liveCanvas?.closest('.viewer');
+  const previewStage = $('encodedPreviewStage');
+  const previewPlaceholder = $('exportPreviewPlaceholder');
+  const recordButton = $('exportRecord');
+  const stopButton = $('exportStop');
+  const prepareButton = $('prepareBtn');
+  const playButton = $('playBtn');
+  const fileInput = $('fileInput');
+  const presetInput = $('exportPreset');
+  const durationInput = $('exportDuration');
+  const moduleInput = $('exportModulePx');
+  const bitrateInput = $('exportBitrate');
+  const visibleInput = $('exportPreview');
+  const previewToggle = $('exportTogglePreview');
+  const previewState = $('exportPreviewState');
+  const status = $('exportStatus');
+  const estimate = $('exportEstimatedSize');
+  const progress = $('exportProgress');
+  const download = $('exportDownload');
+  if (!videoCanvas || !recordButton || !fileInput || !prepareButton || !playButton) return;
+
+  const PROFILES = Object.freeze({
+    tiny: { mode: 'single', bytes: 1003, fps: 10, px: 2, kbps: 260, redundancy: 3.5 },
+    compact: { mode: 'single', bytes: 1003, fps: 12, px: 3, kbps: 700, redundancy: 3.0 },
+    balanced: { mode: 'quad', bytes: 1003, fps: 12, px: 3, kbps: 2200, redundancy: 2.7 },
+    fast: { mode: 'quad', bytes: 1465, fps: 20, px: 4, kbps: 6000, redundancy: 2.5 }
+  });
+  const MIN_SECONDS = 12;
+  const MAX_AUTO_SECONDS = 900;
+  const QUIET_MODULES = 4;
+  const imageCache = new WeakMap();
+  const ctx = videoCanvas.getContext('2d', { alpha: false });
+  let latestPatterns = null;
+  let track = null;
+  let stream = null;
+  let recorder = null;
+  let recorderChunks = [];
+  let recording = false;
+  let preparing = false;
+  let startedAt = 0;
+  let targetSeconds = 0;
+  let elapsedTimer = 0;
+  let paintedFrames = 0;
+  let finalUrl = null;
+  let fileLabel = '';
+  let lastMeta = null;
+
+  const formatBytes = n => n >= 1048576 ? (n / 1048576).toFixed(2) + ' MiB'
+    : n >= 1024 ? (n / 1024).toFixed(1) + ' KiB' : Math.round(n) + ' B';
+  function message(text) { status.textContent = text; }
+  function setState(text) { if (previewState) previewState.textContent = text; }
+  function currentProfile() { return PROFILES[presetInput.value] || PROFILES.compact; }
+  function readSettings() {
+    const profile = currentProfile();
+    const px = Math.max(2, Math.min(5, Number(moduleInput.value) || profile.px));
+    const kbps = Math.max(160, Math.min(16000, Number(bitrateInput.value) || profile.kbps));
+    return { ...profile, px, kbps, bitrate: kbps * 1000 };
   }
+  function supportedMime() {
+    if (typeof MediaRecorder === 'undefined') return '';
+    const formats = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'];
+    return formats.find(mime => MediaRecorder.isTypeSupported?.(mime)) || '';
+  }
+  function updatePreview() {
+    const visible = Boolean(visibleInput.checked);
+    liveViewer?.classList.toggle('preview-hidden', !visible);
+    previewStage?.classList.toggle('preview-hidden', !visible);
+    if (previewToggle) {
+      previewToggle.textContent = visible ? 'Hide preview' : 'Show preview';
+      previewToggle.setAttribute('aria-pressed', String(visible));
+    }
+  }
+  visibleInput?.addEventListener('change', updatePreview);
   previewToggle?.addEventListener('click', () => {
-    preview.checked = !preview.checked;
+    visibleInput.checked = !visibleInput.checked;
     updatePreview();
   });
-  preview.addEventListener('change', updatePreview);
   updatePreview();
-  function applyPreset() {
-    const [bytes, rate] = {quality:[1273,20],balanced:[1465,24],fast:[2068,30]}[preset.value] || [1465,24];
-    byId('qrMode').value = 'quad';
-    byId('qrMode').dispatchEvent(new Event('change', {bubbles:true}));
-    byId('chunkSize').value = String(bytes);
-    byId('fps').value = String(rate);
-    byId('chunkSize').dispatchEvent(new Event('change', {bubbles:true}));
-    byId('fps').dispatchEvent(new Event('change', {bubbles:true}));
+
+  function applyProfileToInputs() {
+    const p = currentProfile();
+    moduleInput.value = String(p.px);
+    bitrateInput.value = String(p.kbps);
+    updateEstimatedSize();
   }
-  preset.addEventListener('change', () => {
-    applyPreset();
-    log('Preset updated. Click Prepare QR stream again to apply it to your file.');
-  });
-  applyPreset();
-  function cleanupTracks() {
-    if (mediaStream) for (const track of mediaStream.getTracks()) track.stop();
-    mediaStream = null;
+  function estimateSeconds(meta, p) {
+    if (!meta?.k) return null;
+    const payloadsPerScreen = p.mode === 'quad' ? 4 : 1;
+    return Math.max(MIN_SECONDS, Math.ceil((meta.k * p.redundancy) / (p.fps * payloadsPerScreen) + 6));
   }
-  function clearIntervalSafely() {
-    if (interval) clearInterval(interval);
-    interval = 0;
+  function updateEstimatedSize() {
+    const p = readSettings();
+    const automatic = estimateSeconds(lastMeta, p);
+    const chosen = durationInput.value === 'auto' ? automatic : Number(durationInput.value);
+    const modules = p.bytes <= 1003 ? 105 : p.bytes <= 1273 ? 117 : 125;
+    const width = (modules + 2 * QUIET_MODULES) * p.px * (p.mode === 'quad' ? 2 : 1);
+    const pixels = width % 2 ? width + 1 : width;
+    const secondsText = chosen === null ? 'after preparation' : `${chosen} s`;
+    const estimateBytes = chosen === null ? '—' : formatBytes(p.bitrate * chosen / 8);
+    estimate.textContent = `${pixels} × ${pixels} px · ${p.kbps} kbps requested · ${p.fps} FPS · ${secondsText} · est. ${estimateBytes}`;
+    return { p, chosen };
   }
-  function finish() {
-    clearIntervalSafely();
-    if (recorder && recorder.state !== 'inactive') recorder.stop();
-    stop.disabled = true;
-    record.disabled = false;
-    if (!play.disabled && play.textContent.toLowerCase().includes('pause')) play.click();
-    if (previewState) previewState.textContent = 'Encoding';
-    log('Encoding video…');
+  presetInput?.addEventListener('change', applyProfileToInputs);
+  moduleInput?.addEventListener('change', updateEstimatedSize);
+  bitrateInput?.addEventListener('input', updateEstimatedSize);
+  durationInput?.addEventListener('change', updateEstimatedSize);
+  applyProfileToInputs();
+
+  function tileCanvas(pattern) {
+    let tile = imageCache.get(pattern);
+    if (tile) return tile;
+    const side = pattern.count + QUIET_MODULES * 2;
+    tile = document.createElement('canvas');
+    tile.width = side;
+    tile.height = side;
+    const tc = tile.getContext('2d', { alpha: false });
+    const image = tc.createImageData(side, side);
+    image.data.fill(255);
+    for (let y = 0; y < pattern.count; y++) {
+      for (let x = 0; x < pattern.count; x++) {
+        if (!pattern.dark[y * pattern.count + x]) continue;
+        const index = ((y + QUIET_MODULES) * side + x + QUIET_MODULES) * 4;
+        image.data[index] = image.data[index + 1] = image.data[index + 2] = 0;
+      }
+    }
+    tc.putImageData(image, 0, 0);
+    imageCache.set(pattern, tile);
+    return tile;
   }
-  record.addEventListener('click', () => {
-    if (typeof MediaRecorder === 'undefined' || !canvas.captureStream) {
-      log('This browser does not support canvas video recording. Try recent Chrome or Edge.');
+  function paintQrFrame(patterns) {
+    if (!patterns?.length) return;
+    latestPatterns = patterns;
+    const valid = patterns.find(Boolean);
+    if (!valid) return;
+    if (!recording && !preparing) return; // no extra encoding overhead during normal live playback
+    const p = readSettings();
+    const columns = patterns.length === 4 ? 2 : 1;
+    const rows = columns;
+    const tileSize = (valid.count + QUIET_MODULES * 2) * p.px;
+    const side = tileSize * columns;
+    const evenSide = side + (side % 2);
+    if (videoCanvas.width !== evenSide || videoCanvas.height !== evenSide) {
+      videoCanvas.width = evenSide;
+      videoCanvas.height = evenSide;
+    }
+    ctx.imageSmoothingEnabled = false;
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, videoCanvas.width, videoCanvas.height);
+    for (let index = 0; index < patterns.length; index++) {
+      const pattern = patterns[index];
+      if (!pattern) continue;
+      const x = (index % columns) * tileSize;
+      const y = Math.floor(index / columns) * tileSize;
+      const tile = tileCanvas(pattern);
+      ctx.drawImage(tile, x, y, tileSize, tileSize);
+    }
+    if (previewPlaceholder) previewPlaceholder.hidden = true;
+    if (recording && recorder?.state === 'recording') {
+      paintedFrames++;
+      try { track?.requestFrame?.(); } catch (_) {} // supported browsers: exact frame sequence
+    }
+  }
+  window.QRTurboOnQRRender = paintQrFrame;
+  function applySenderSettings(p) {
+    const qrMode = $('qrMode'), fps = $('fps'), chunkSize = $('chunkSize');
+    qrMode.value = p.mode;
+    qrMode.dispatchEvent(new Event('change', { bubbles: true }));
+    fps.value = String(p.fps);
+    chunkSize.value = String(p.bytes);
+    if (fps.value !== String(p.fps) || chunkSize.value !== String(p.bytes)) {
+      throw new Error('This sender does not support the selected compact video profile.');
+    }
+    fps.dispatchEvent(new Event('change', { bubbles: true }));
+    chunkSize.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  function prepareFreshSequence() {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => cleanup(new Error('QR preparation timed out.')), 60000);
+      function cleanup(error, meta) {
+        clearTimeout(timer);
+        window.removeEventListener('qr-turbo:prepared', onReady);
+        window.removeEventListener('qr-turbo:prepare-error', onError);
+        if (error) reject(error); else resolve(meta);
+      }
+      const onReady = event => cleanup(null, event.detail);
+      const onError = event => cleanup(new Error(String(event.detail || 'Preparation failed.')));
+      window.addEventListener('qr-turbo:prepared', onReady);
+      window.addEventListener('qr-turbo:prepare-error', onError);
+      prepareButton.click();
+    });
+  }
+  function stopStream() {
+    try { stream?.getTracks().forEach(t => t.stop()); } catch (_) {}
+    track = null;
+    stream = null;
+  }
+  function stopLivePlayback() {
+    if (playButton && /^pause$/i.test(playButton.textContent.trim())) playButton.click();
+  }
+  function stopRecording() {
+    if (!recording) return;
+    recording = false;
+    clearInterval(elapsedTimer);
+    elapsedTimer = 0;
+    stopButton.disabled = true;
+    stopLivePlayback();
+    setState('Finishing');
+    message(`Finalizing video · ${paintedFrames} QR updates captured…`);
+    if (recorder?.state === 'recording' || recorder?.state === 'paused') {
+      try { recorder.stop(); } catch (error) { message('Failed to finish video: ' + error.message); stopStream(); recordButton.disabled = false; }
+    } else { stopStream(); recordButton.disabled = false; }
+  }
+  async function recordVideo() {
+    if (preparing || recording) return;
+    if (!fileInput.files?.length && prepareButton.disabled) { message('Choose a file first.'); return; }
+    if (typeof MediaRecorder === 'undefined' || typeof videoCanvas.captureStream !== 'function') {
+      message('Video export requires MediaRecorder and canvas capture. Try a current desktop browser.');
       return;
     }
-    if (play.disabled) { log('Choose a file and click Prepare QR stream first.'); return; }
-    const type = availableFormat();
-    if (!type) { log('No supported video recording format. Try Chrome or Edge.'); return; }
+    preparing = true;
+    recordButton.disabled = true;
+    download.hidden = true;
+    download.removeAttribute('href');
+    if (finalUrl) { URL.revokeObjectURL(finalUrl); finalUrl = null; }
+    setState('Preparing');
+    const settings = readSettings();
+    const mime = supportedMime();
     try {
-      const fps = Number(byId('fps').value) || 24;
-      mediaStream = canvas.captureStream(fps);
-      if (!mediaStream.getVideoTracks().length) throw new Error('Canvas capture did not provide a video track.');
-      recorder = new MediaRecorder(mediaStream, {mimeType:type, videoBitsPerSecond:32_000_000});
-      chunks = [];
-      if (lastUrl) {URL.revokeObjectURL(lastUrl);lastUrl=null;}
-      download.hidden = true;
-      download.removeAttribute('href');
-      recorder.ondataavailable = event => {if (event.data.size) chunks.push(event.data);};
-      recorder.onerror = event => {log('Recording failed: ' + (event.error?.message || 'unknown error'));clearIntervalSafely();cleanupTracks();record.disabled=false;stop.disabled=true;};
-      recorder.onstop = () => {
-        if (previewState) previewState.textContent = 'Video ready';
-        cleanupTracks();
-        clearIntervalSafely();
-        if (!chunks.length) {log('No video data was recorded. Try another browser.');return;}
-        const videoBlob = new Blob(chunks,{type:recorder.mimeType || type});
-        lastUrl = URL.createObjectURL(videoBlob);
-        const extension = videoBlob.type.includes('mp4') ? 'mp4' : 'webm';
-        download.href = lastUrl;
-        download.download = 'qr-turbo-transfer.' + extension;
-        download.hidden = false;
-        download.textContent = 'Download video (' + readableBytes(videoBlob.size) + ')';
-        log('Video ready. Share the file, then open Import Video to decode it.');
+      stopLivePlayback();
+      applySenderSettings(settings);
+      message('Preparing the QR stream from packet 0…');
+      lastMeta = await prepareFreshSequence();
+      const automatic = estimateSeconds(lastMeta, settings);
+      targetSeconds = durationInput.value === 'auto' ? automatic : Number(durationInput.value);
+      if (durationInput.value === 'auto' && targetSeconds > MAX_AUTO_SECONDS) {
+        throw new Error('Auto video would exceed 15 minutes. Use a faster preset or a smaller input file.');
+      }
+      if (!targetSeconds || !Number.isFinite(targetSeconds)) throw new Error('Invalid recording duration.');
+      const fileName = String(lastMeta.name || 'transfer').replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 64);
+      fileLabel = fileName || 'transfer';
+      updateEstimatedSize();
+      recorderChunks = [];
+      paintedFrames = 0;
+      // requestFrame() captures each native QR update when supported; fallback captures changed frames at FPS.
+      stream = videoCanvas.captureStream(0);
+      track = stream.getVideoTracks()[0];
+      if (!track) throw new Error('Canvas capture track unavailable.');
+      if (typeof track.requestFrame !== 'function') {
+        stopStream();
+        stream = videoCanvas.captureStream(settings.fps);
+        track = stream.getVideoTracks()[0];
+      }
+      const options = { videoBitsPerSecond: settings.bitrate };
+      if (mime) options.mimeType = mime;
+      recorder = new MediaRecorder(stream, options);
+      recorder.ondataavailable = event => { if (event.data?.size) recorderChunks.push(event.data); };
+      recorder.onerror = event => {
+        message('Video recording failed: ' + (event.error?.message || 'encoder error'));
+        setState('Error');
+        recording = false;
+        stopStream();
+        clearInterval(elapsedTimer);
+        recordButton.disabled = false;
+        stopButton.disabled = true;
       };
-      maxSeconds = Number(duration.value) || 60;
-      startedAt = performance.now();
-      progress.value = 0;
+      recorder.onstop = () => {
+        clearInterval(elapsedTimer);
+        stopStream();
+        recordButton.disabled = false;
+        stopButton.disabled = true;
+        if (!recorderChunks.length) { message('No video data was produced. Try another browser.'); setState('No data'); return; }
+        const blob = new Blob(recorderChunks, { type: recorder.mimeType || mime || 'video/webm' });
+        const ext = blob.type.includes('mp4') ? 'mp4' : 'webm';
+        finalUrl = URL.createObjectURL(blob);
+        download.href = finalUrl;
+        download.download = `qr-turbo-${fileLabel}.${ext}`;
+        download.textContent = `Download QR video · ${formatBytes(blob.size)}`;
+        download.hidden = false;
+        setState('Ready');
+        message(`Video ready: ${formatBytes(blob.size)} · ${paintedFrames} QR updates · ${videoCanvas.width}×${videoCanvas.height} · ${Math.round(recorder.videoBitsPerSecond / 1000)} kbps configured. Test it in Import Video.`);
+      };
       recorder.start(1000);
-      if (previewState) previewState.textContent = 'Recording';
-      record.disabled = true;
-      stop.disabled = false;
-      if (!play.textContent.toLowerCase().includes('pause')) play.click();
-      interval = setInterval(() => {
+      recording = true;
+      preparing = false;
+      startedAt = performance.now();
+      stopButton.disabled = false;
+      setState('Recording');
+      progress.value = 0;
+      paintQrFrame(latestPatterns); // capture the first systematic QR codes before playback advances
+      try { track.requestFrame?.(); } catch (_) {}
+      playButton.click();
+      elapsedTimer = setInterval(() => {
         const elapsed = (performance.now() - startedAt) / 1000;
-        progress.value = Math.min(100, Math.round(elapsed / maxSeconds * 100));
-        log('Recording QR frames: ' + elapsed.toFixed(1) + ' / ' + maxSeconds + ' seconds · ' + chunks.length + ' video chunks');
-        if (elapsed >= maxSeconds) finish();
+        progress.value = Math.min(100, elapsed / targetSeconds * 100);
+        message(`Recording QR sequence: ${elapsed.toFixed(1)} / ${targetSeconds} s · ${paintedFrames} QR updates · requested ${settings.kbps} kbps`);
+        if (elapsed >= targetSeconds) stopRecording();
       }, 200);
     } catch (error) {
-      cleanupTracks();clearIntervalSafely();record.disabled=false;stop.disabled=true;
-      if (previewState) previewState.textContent = 'Recording failed';
-      log('Unable to record video: ' + error.message);
+      preparing = false;
+      recording = false;
+      stopStream();
+      stopButton.disabled = true;
+      recordButton.disabled = false;
+      setState('Error');
+      message('Could not record QR video: ' + error.message);
     }
+  }
+  recordButton.addEventListener('click', () => void recordVideo());
+  stopButton?.addEventListener('click', stopRecording);
+  window.addEventListener('pagehide', () => {
+    clearInterval(elapsedTimer);
+    if (recorder?.state === 'recording') recorder.stop();
+    stopStream();
+    if (finalUrl) URL.revokeObjectURL(finalUrl);
   });
-  stop.addEventListener('click', finish);
-  window.addEventListener('pagehide', () => {clearIntervalSafely();cleanupTracks();if(lastUrl)URL.revokeObjectURL(lastUrl);});
 })();
