@@ -1,4 +1,4 @@
-import { cpSync, readFileSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 function mustReplace(content, needle, replacement, file) {
@@ -83,13 +83,13 @@ function insertVideoReceiverHooks(source) {
 }
 
 export function addVideoRoutes(output) {
-  cpSync(join(output, 'send'), join(output, 'export'), { recursive: true });
+  // Video recording now lives inside Send.
   cpSync(join(output, 'receive'), join(output, 'import'), { recursive: true });
-  const exportPath = join(output, 'export', 'index.html');
+  const exportPath = join(output, 'send', 'index.html');
   let exp = readFileSync(exportPath, 'utf8');
   exp = mustReplace(exp, '<body>', '<body class="video-export-page">', exportPath);
   exp = mustReplace(exp, '</head>', '<link rel="stylesheet" href="../video.css"></head>', exportPath);
-  exp = mustReplace(exp, '<div class="actions">', String.raw`<section class="video-tool-panel" aria-label="Export QR video">
+  exp = mustReplace(exp, '<div class="status">', String.raw`<section class="video-tool-panel" id="videoExportPanel" aria-label="Export QR video">
     <h2>Export an animated QR video</h2>
     <p>Choose a file above and prepare the QR stream. Then record it as a shareable video. It contains QR codes, not the original visible video.</p>
     <div class="video-field-grid">
@@ -113,9 +113,11 @@ export function addVideoRoutes(output) {
     <output id="exportStatus" role="status">Select a file, then click Prepare QR stream.</output>
     <a id="exportDownload" class="video-download" hidden download>Download QR video</a>
   </section>
-  <div class="actions">`, exportPath);
+  <div class="status">`, exportPath);
   exp = mustReplace(exp, '</body>', '<script src="../video-export.js" defer></script></body>', exportPath);
   writeFileSync(exportPath, exp);
+  mkdirSync(join(output, "export"), { recursive: true });
+  writeFileSync(join(output, "export", "index.html"), "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta http-equiv=\"refresh\" content=\"0;url=../send/\"><meta name=\"robots\" content=\"noindex\"></head><body><a href=\"../send/\">Video export is in Send</a></body></html>");
 
   const importPath = join(output, 'import', 'index.html');
   let imp = readFileSync(importPath, 'utf8');
