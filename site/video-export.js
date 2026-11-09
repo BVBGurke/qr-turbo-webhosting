@@ -97,7 +97,7 @@
     const p = readSettings();
     const automatic = estimateSeconds(lastMeta, p);
     const chosen = durationInput.value === 'auto' ? automatic : Number(durationInput.value);
-    const modules = p.bytes <= 1003 ? 105 : p.bytes <= 1273 ? 117 : 125;
+    const modules = latestPatterns?.find(Boolean)?.count ?? (p.bytes <= 1003 ? 105 : p.bytes <= 1273 ? 117 : 125);
     const width = (modules + 2 * QUIET_MODULES) * p.px * (p.mode === 'quad' ? 2 : 1);
     const pixels = width % 2 ? width + 1 : width;
     const secondsText = chosen === null ? 'after preparation' : `${chosen} s`;
@@ -232,6 +232,8 @@
     const mime = supportedMime();
     try {
       stopLivePlayback();
+      latestPatterns = null;
+      lastMeta = null;
       applySenderSettings(settings);
       message('Preparing the QR stream from packet 0…');
       lastMeta = await prepareFreshSequence();
