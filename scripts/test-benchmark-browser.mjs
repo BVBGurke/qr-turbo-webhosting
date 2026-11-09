@@ -53,6 +53,9 @@ try{
  assert.equal(await page.locator('#advancedSettings').isVisible(),false);
  await page.locator('#advancedMode').click();
  assert.equal(await page.locator('#advancedSettings').isVisible(),true);
+ // Advanced categories are intentionally collapsed. Open the relevant groups.
+ await page.locator('#advancedSettings details').nth(0).locator('summary').click();
+ await page.locator('#advancedSettings details').nth(6).locator('summary').click();
  await page.locator('#fileKiB').fill('2');
  await page.locator('#repetitions').fill('1');
  await page.locator('#warmups').fill('0');
