@@ -150,3 +150,26 @@ for(const route of ['receive','screen']){
   }
 }
 console.log('Manual grid calibration, transfer gate and Rescan controls verified for camera and screen receivers.');
+
+const benchmarkFiles=['benchmark/index.html','benchmark/benchmark-core.mjs',
+  'benchmark/benchmark-app.mjs','benchmark/benchmark-store.mjs','benchmark/benchmark.css'];
+for(const asset of benchmarkFiles){
+ if(!existsSync(join(dir,asset)))throw new Error('Benchmark Lab asset missing: '+asset);
+}
+const benchmarkHTML=readFileSync(join(dir,'benchmark/index.html'),'utf8');
+for(const token of ['lang="de"','id="startBenchmark"','id="runMatrix"',
+  'id="sourcePreview"','id="resultRows"','data-preset="overdrive"']){
+ if(!benchmarkHTML.includes(token))throw new Error('Benchmark Lab UI missing: '+token);
+}
+for(const path of ['index.html','send/index.html','receive/index.html','screen/index.html','import/index.html']){
+ if(!readFileSync(join(dir,path),'utf8').includes('benchmark/'))
+  throw new Error('Benchmark navigation missing: '+path);
+}
+console.log('Benchmark Lab: statischer Build und Navigation geprüft.');
+
+if(!existsSync(join(dir,'benchmark/benchmark-source-monitor.mjs')))
+ throw Error('Source monitor module missing');
+const labApp=readFileSync(join(dir,'benchmark/benchmark-app.mjs'),'utf8');
+if(!labApp.includes('createReceiverMonitor')||!labApp.includes('receiverMonitor?.arm()'))
+ throw Error('Original receiver monitoring is not connected');
+console.log('Original receiver monitor integrated for camera/screen/video.');
