@@ -6,12 +6,17 @@ import assert from 'node:assert/strict';
 import {spawn} from 'node:child_process';
 import {chromium} from 'playwright-core';
 const port=18980,origin='http://127.0.0.1:'+port,wait=ms=>new Promise(r=>setTimeout(r,ms));
-const server=spawn('python3',['-m','http.server',String(port),'--bind','127.0.0.1','--directory','dist'],
- {stdio:'pipe'});
+// Windows MIME mappings can label .mjs as text/plain; module scripts need JavaScript MIME.
+const server=spawn('python3',['-c',`import http.server
+from functools import partial
+handler = http.server.SimpleHTTPRequestHandler
+handler.extensions_map = {**handler.extensions_map, '.mjs': 'text/javascript'}
+http.server.ThreadingHTTPServer(('127.0.0.1', ${port}), partial(handler, directory='dist')).serve_forever()`],
+ {stdio:'ignore'});
 let browser;
 async function waitServer(){
  for(let i=0;i<60;i++){
-  try{if((await fetch(origin+'/benchmark/')).ok)return;}
+  try{if((await fetch(origin+'/benchmark/',{method:'HEAD'})).ok)return;}
   catch{}
   await wait(150);
  }

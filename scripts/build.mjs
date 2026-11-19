@@ -27,6 +27,16 @@ const UPSTREAM_REF = process.env.UPSTREAM_REF || '44d8c9b64c920183f5f250a6d9deb1
 
 function run(executable, args, cwd = project) {
   console.log('$', [executable, ...args].join(' '));
+  if (process.platform === 'win32' && executable === 'npm') {
+    if (process.env.npm_execpath) {
+      execFileSync(process.execPath, [process.env.npm_execpath, ...args], {
+        cwd, stdio: 'inherit', env: process.env,
+      });
+      return;
+    }
+    execFileSync('npm.cmd', args, { cwd, stdio: 'inherit', env: process.env, shell: true });
+    return;
+  }
   execFileSync(executable, args, { cwd, stdio: 'inherit', env: process.env });
 }
 function requireFile(path) {

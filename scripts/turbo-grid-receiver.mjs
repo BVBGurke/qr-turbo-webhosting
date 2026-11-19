@@ -7,15 +7,137 @@ function requirePatch(file,from,to){
   writeFileSync(file,src.replace(from,to));
 }
 
-const scanner="  // The extended grid uses the same WASM QR decoder workers as BeamFerry.\n  // A worker reads one QR tile at a time, keeping peak memory bounded.\n  function turboGridBounds() {\n    const columns=4,rows=turboGridMode===8?2:4;\n    if(turboGridRect)return turboGridRect;\n    const width=video.videoWidth||1,height=video.videoHeight||1;\n    const aspect=columns/rows;\n    const w=Math.max(1,Math.min(width,height*aspect));\n    const h=w/aspect;\n    return {x:(width-w)/2,y:(height-h)/2,width:w,height:h};\n  }\n  function turboGridTile(index) {\n    const bounds=turboGridBounds(),columns=4,rows=turboGridMode===8?2:4;\n    const cellW=bounds.width/columns,cellH=bounds.height/rows;\n    const col=index%columns,row=Math.floor(index/columns);\n    const padX=cellW*0.055,padY=cellH*0.055;\n    return clampScanRegion({\n      x:bounds.x+cellW*col-padX,y:bounds.y+cellH*row-padY,\n      width:cellW+2*padX,height:cellH+2*padY\n    });\n  }\n  function noteTurboGridHit(code,origin) {\n    const parsed=H?.parseFrame(code?.bytes);\n    if(!parsed||parsed.header.layoutCodes<8)return;\n    const header=parsed.header;\n    const mapped=transferHitTile({bytes:code.bytes,position:code.position,origin});\n    if(!mapped||mapped.width<24||mapped.height<24)return;\n    const columns=4,rows=header.layoutCodes===8?2:4;\n    const pitchX=mapped.width*1.085,pitchY=mapped.height*1.085;\n    const x=mapped.x - (header.tileIndex%columns)*pitchX - pitchX*.04;\n    const y=mapped.y - Math.floor(header.tileIndex/columns)*pitchY - pitchY*.04;\n    if(!Number.isFinite(x+y))return;\n    // Smooth tracking rather than jittering the entire grid on every frame.\n    const rect={x,y,width:columns*pitchX,height:rows*pitchY};\n    if(!turboGridRect)turboGridRect=rect;\n    else {\n      const alpha=.13;\n      for(const key of ['x','y','width','height'])turboGridRect[key]+=alpha*(rect[key]-turboGridRect[key]);\n    }\n  }\n  function decodeTurboGridFrame() {\n    if(video.readyState<2||!stream)return false;\n    const slots=idleHighWorkerSlots();\n    if(!slots.length){workerBusyDrops++;return false;}\n    const count=turboGridMode;\n    const budget=Math.min(slots.length,4);\n    for(const slot of slots.slice(0,budget)) {\n      const index=turboGridCursor++%count;\n      const region=turboGridTile(index);\n      highWorkerBusy[slot]=true; // reserve the worker during async screenshot acquisition\n      highWorkerStartedAt[slot]=performance.now();\n      void postHighSpeedRegion(slot,region,1,false,true).then(hits=>{\n        if(hits.length)highScanMisses=0;\n      }).catch(()=>{\n        workerErrors++;\n        highWorkerBusy[slot]=false;\n      });\n    }\n    turboGridScanCount++;\n    if(turboGridScanCount%30===0)\n      status.textContent='Turbo V2 · '+count+'-code grid · scanning tile '+(turboGridCursor%count+1)+'/'+count;\n    return true;\n  }\n  const turboGridSelector=document.getElementById('turboGridMode');\n  turboGridSelector?.addEventListener('change',()=>{\n    turboGridMode=Number(turboGridSelector.value)||0;\n    turboGridRect=null;turboGridCursor=0;\n    highMultiLayout=turboGridMode>=8;\n    status.textContent=turboGridMode>=8\n      ?'Scanning '+turboGridMode+' QR tiles. Keep the full grid visible.'\n      :'Automatic QR grid detection enabled.';\n  });";
+const scanner="  // The extended grid uses the same WASM QR decoder workers as BeamFerry.\n  // A worker reads one QR tile at a time, keeping peak memory bounded.\n  function turboGridBounds() {\n    const columns=4,rows=turboGridMode===8?2:4;\n    if(turboGridRect)return turboGridRect;\n    const width=video.videoWidth||1,height=video.videoHeight||1;\n    const aspect=columns/rows;\n    const w=Math.max(1,Math.min(width,height*aspect));\n    const h=w/aspect;\n    return {x:(width-w)/2,y:(height-h)/2,width:w,height:h};\n  }\n  function turboGridTile(index) {\n    const bounds=turboGridBounds(),columns=4,rows=turboGridMode===8?2:4;\n    const cellW=bounds.width/columns,cellH=bounds.height/rows;\n    const col=index%columns,row=Math.floor(index/columns);\n    const padX=cellW*0.055,padY=cellH*0.055;\n    return clampScanRegion({\n      x:bounds.x+cellW*col-padX,y:bounds.y+cellH*row-padY,\n      width:cellW+2*padX,height:cellH+2*padY\n    });\n  }\n  function noteTurboGridHit(code,origin) {\n    const parsed=H?.parseFrame(code?.bytes);\n    if(!parsed||parsed.header.layoutCodes<8)return;\n    const header=parsed.header;\n    const mapped=transferHitTile({bytes:code.bytes,position:code.position,origin});\n    if(!mapped||mapped.width<24||mapped.height<24)return;\n    const columns=4,rows=header.layoutCodes===8?2:4;\n    const pitchX=mapped.width*1.085,pitchY=mapped.height*1.085;\n    const x=mapped.x - (header.tileIndex%columns)*pitchX - pitchX*.04;\n    const y=mapped.y - Math.floor(header.tileIndex/columns)*pitchY - pitchY*.04;\n    if(!Number.isFinite(x+y))return;\n    // Smooth tracking rather than jittering the entire grid on every frame.\n    const rect={x,y,width:columns*pitchX,height:rows*pitchY};\n    if(!turboGridRect)turboGridRect=rect;\n    else {\n      const alpha=.13;\n      for(const key of ['x','y','width','height'])turboGridRect[key]+=alpha*(rect[key]-turboGridRect[key]);\n    }\n  }\n  function decodeTurboGridFrame() {\n    if(video.readyState<2||!stream)return false;\n    const slots=idleHighWorkerSlots();\n    if(!slots.length){workerBusyDrops++;return false;}\n    const count=turboGridMode;\n    const budget=Math.min(slots.length,4);\n    for(const slot of slots.slice(0,budget)) {\n      const index=turboGridCursor++%count;\n      const region=turboGridTile(index);\n      highWorkerBusy[slot]=true; // reserve the worker during async screenshot acquisition\n      highWorkerStartedAt[slot]=performance.now();\n      void postHighSpeedRegion(slot,region,1,false,true).then(hits=>{\n        if(hits.length)highScanMisses=0;\n      }).catch(()=>{\n        workerErrors++;\n        highWorkerBusy[slot]=false;\n      });\n    }\n    turboGridScanCount++;\n    if(turboGridScanCount%30===0)\n      status.textContent='Turbo V2 · '+count+'-code grid · scanning tile '+(turboGridCursor%count+1)+'/'+count;\n    return true;\n  }\n  const turboGridSelector=document.getElementById('turboGridMode');\n  turboGridSelector?.addEventListener('change',()=>{\n    turboGridMode=Number(turboGridSelector.value)||0;\n    turboGridRect=null;turboGridCursor=0;\n    highMultiLayout=turboGridMode===4||turboGridMode>=8;\n    status.textContent=turboGridMode>=8\n      ?'Scanning '+turboGridMode+' QR tiles. Keep the full grid visible.'\n      :turboGridMode===4?'Scanning 4 QR tiles in a 2×2 grid.'\n      :turboGridMode===1?'Single QR code mode enabled.'\n      :'Automatic QR grid detection enabled.';\n  });";
+
+const robustScanner=scanner.replace(
+  /      void postHighSpeedRegion\(slot,region,1,false,true\)\.then\(hits=>\{\n        if\(hits\.length\)highScanMisses=0;\n      \}\)\.catch\(\(\)=>\{\n        workerErrors\+\+;\n        highWorkerBusy\[slot\]=false;\n      \}\);/,
+  '      const dispatched=postHighSpeedRegion(slot,region,1,false,true);\n' +
+  '      if(dispatched&&typeof dispatched.then==="function"){\n' +
+  '        void dispatched.then(hits=>{\n' +
+  '          if(hits.length)highScanMisses=0;\n' +
+  '        }).catch(()=>{\n' +
+  '          workerErrors++;\n' +
+  '          highWorkerBusy[slot]=false;\n' +
+  '        });\n' +
+  '      }'
+);
+if(robustScanner===scanner)throw Error('Turbo Grid scanner dispatch patch anchor missing');
+
+const orientationScanner=robustScanner
+  .replace(
+    '  function turboGridBounds() {\n    const columns=4,rows=turboGridMode===8?2:4;\n    if(turboGridRect)return turboGridRect;',
+    '  function turboGridShape() {\n'+
+    '    const portrait=(video.videoHeight||0)>(video.videoWidth||0);\n'+
+    '    const columns=turboGridMode===8&&portrait?2:4;\n'+
+    '    return {columns,rows:turboGridMode===8?8/columns:4};\n'+
+    '  }\n'+
+    '  function turboGridBounds() {\n'+
+    '    const {columns,rows}=turboGridShape();\n'+
+    '    if(turboGridRect)return turboGridRect;'
+  )
+  .replace(
+    '    const bounds=turboGridBounds(),columns=4,rows=turboGridMode===8?2:4;',
+    '    const bounds=turboGridBounds(),{columns,rows}=turboGridShape();'
+  )
+  .replace(/  function noteTurboGridHit\(code,origin\) \{[\s\S]*?\n  \}\n  function decodeTurboGridFrame\(\) \{/,
+    '  function noteTurboGridHit(code,origin) {\n'+
+    '    const parsed=H?.parseFrame(code?.bytes),position=code?.position;\n'+
+    '    if(window.QRTurboCameraViewer&&position&&origin) {\n'+
+    '      const corners=[position.topLeft,position.topRight,position.bottomRight,position.bottomLeft].filter(p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y)).map(p=>({x:origin.x+p.x*origin.srcW/origin.outW,y:origin.y+p.y*origin.srcH/origin.outH}));\n'+
+    '      if(corners.length>=3)window.dispatchEvent(new CustomEvent("qr-turbo:scan-hit",{detail:{hits:[{corners,videoWidth:video.videoWidth,videoHeight:video.videoHeight,layoutCodes:parsed?.header.layoutCodes||1,tileIndex:parsed?.header.tileIndex,sessionId:parsed?.header.sessionId}]}}));\n'+
+    '    }\n'+
+    '    if(!parsed||parsed.header.layoutCodes<8||turboGridRect)return;\n'+
+    '    turboGridRect=turboGridBounds();\n'+
+    '  }\n'+
+    '  function decodeTurboGridFrame() {'
+  );
+if(orientationScanner===robustScanner)throw Error('Turbo Grid orientation patch anchor missing');
+
+const preflightNote=[
+  '  function updateTurboGridStatus(message,error=false) {',
+  '    const label=document.getElementById("turboGridStatus");',
+  '    if(!label)return;',
+  '    const ready=turboGridRequested===0||turboGridReady;',
+  '    label.dataset.ready=String(ready);label.dataset.error=String(error);',
+  '    label.dataset.seen=String(turboGridSeen.size);',
+  '    label.textContent=message||(turboGridRequested?',
+  '      ready?"All "+turboGridRequested+" QR codes found. Receiving.":"Scanning QR grid: "+turboGridSeen.size+"/"+turboGridRequested+" detected. Transfer is waiting.":',
+  '      "Auto-detect is active. Transfer starts when a valid QR is recognized.");',
+  '  }',
+  '  function noteTurboGridHit(code,origin) {',
+  '    const parsed=H?.parseFrame(code?.bytes),header=parsed?.header,position=code?.position;',
+  '    if(!header)return turboGridRequested===0;',
+  '    if(window.QRTurboCameraViewer&&position&&origin) {',
+  '      const corners=[position.topLeft,position.topRight,position.bottomRight,position.bottomLeft].filter(p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y)).map(p=>({x:origin.x+p.x*origin.srcW/origin.outW,y:origin.y+p.y*origin.srcH/origin.outH}));',
+  '      if(corners.length>=3)window.dispatchEvent(new CustomEvent("qr-turbo:scan-hit",{detail:{hits:[{corners,videoWidth:video.videoWidth,videoHeight:video.videoHeight,layoutCodes:header.layoutCodes,tileIndex:header.tileIndex,sessionId:header.sessionId}]}}));',
+  '    }',
+  '    if(!turboGridRequested)return true;',
+  '    if(header.layoutCodes!==turboGridRequested) {',
+  '      updateTurboGridStatus("Sender uses "+header.layoutCodes+" QR codes; selected "+turboGridRequested+".",true);',
+  '      status.textContent="QR layout mismatch. Change the selected grid or sender layout.";',
+  '      return false;',
+  '    }',
+  '    if(turboGridRequested===4)highMultiLayout=true;',
+  '    const session=String(header.sessionId)+":"+header.layoutCodes;',
+  '    if(turboGridSession!==session) { turboGridSession=session;turboGridSeen.clear();turboGridReady=false; }',
+  '    let slot=0;',
+  '    if(header.layoutCodes===4) {',
+  '      const mapped=transferHitTile({bytes:code.bytes,position,origin});',
+  '      if(!mapped) { updateTurboGridStatus("Waiting for QR position data. Keep all four codes visible.");return false; }',
+  '      const x=mapped.x+mapped.width/2,y=mapped.y+mapped.height/2;',
+  '      slot=(y>=(video.videoHeight||1)/2?2:0)+(x>=(video.videoWidth||1)/2?1:0);',
+  '    } else if(header.layoutCodes>=8)slot=Number(header.tileIndex);',
+  '    if(!Number.isInteger(slot)||slot<0||slot>=turboGridRequested) {',
+  '      updateTurboGridStatus("Waiting for valid QR slot metadata.");return false;',
+  '    }',
+  '    turboGridSeen.add(slot);turboGridReady=turboGridSeen.size>=turboGridRequested;',
+  '    updateTurboGridStatus();',
+  '    if(turboGridReady)status.textContent="QR grid confirmed. Starting transfer.";',
+  '    return turboGridReady;',
+  '  }',
+  '  function decodeTurboGridFrame() {'
+].join('\n');
+const withPreflightNote=orientationScanner.replace(
+  /  function noteTurboGridHit\(code,origin\) \{[\s\S]*?\n  \}\n  function decodeTurboGridFrame\(\) \{/,preflightNote);
+if(withPreflightNote===orientationScanner)throw Error('Turbo Grid preflight hit handler anchor missing');
+
+const preflightControls=[
+  '  function resetTurboGridScan() {',
+  '    turboGridMode=turboGridRequested;turboGridSeen.clear();turboGridSession=null;',
+  '    turboGridReady=turboGridRequested===0;turboGridRect=null;turboGridCursor=0;highScanMisses=0;',
+  '    highScanRoi=null;highTrackedTiles=null;highMultiLayout=turboGridMode===4||turboGridMode>=8;',
+  '    updateTurboGridStatus(turboGridRequested?"Rescan started: 0/"+turboGridRequested+" found.":"Auto-detect scan restarted.");',
+  '    window.QRTurboCameraViewer?.resetCoverage(turboGridRequested||1);',
+  '  }',
+  '  const turboGridSelector=document.getElementById("turboGridMode");',
+  '  turboGridSelector?.addEventListener("change",()=>{',
+  '    turboGridMode=Number(turboGridSelector.value)||0;turboGridRequested=turboGridMode;',
+  '    turboGridSeen.clear();turboGridSession=null;turboGridReady=turboGridRequested===0;',
+  '    turboGridRect=null;turboGridCursor=0;highMultiLayout=turboGridMode===4||turboGridMode>=8;',
+  '    updateTurboGridStatus();window.QRTurboCameraViewer?.resetCoverage(turboGridRequested||1);',
+  '    status.textContent=turboGridRequested?"Checking all "+turboGridRequested+" QR codes before receiving.":"Automatic QR grid detection enabled.";',
+  '  });',
+  '  document.getElementById("turboGridRescan")?.addEventListener("click",()=>{',
+  '    resetTurboGridScan();',
+  '    if(!stream)document.getElementById("startBtn")?.click();',
+  '  });'
+].join('\n');
+const preflightControlsPattern=/  const turboGridSelector=document\.getElementById\('turboGridMode'\);[\s\S]*?turboGridSelector\?\.addEventListener\('change',\(\)=>\{[\s\S]*?\n  \}\);/;
+const preflightScanner=withPreflightNote.replace(preflightControlsPattern,preflightControls);
+if(preflightScanner===withPreflightNote||!preflightScanner.includes('turboGridRescan'))
+  throw Error('Turbo Grid preflight controls anchor missing');
 
 export function addTurboGridReceivers(dist){
   for(const mode of ['receive','screen','import']){
     const js=join(dist,mode,'app.js'),html=join(dist,mode,'index.html');
     requirePatch(js,'  const HIGH_QUAD_GRAB_MS = 12;',
-      '  const HIGH_QUAD_GRAB_MS = 12;\n  let turboGridMode=0;\n  let turboGridCursor=0;\n  let turboGridRect=null;\n  let turboGridScanCount=0;');
+      '  const HIGH_QUAD_GRAB_MS = 12;\n  let turboGridMode=0;\n  let turboGridRequested=0;\n  let turboGridReady=true;\n  let turboGridSeen=new Set();\n  let turboGridSession=null;\n  let turboGridCursor=0;\n  let turboGridRect=null;\n  let turboGridScanCount=0;');
+    requirePatch(js,'      const codes = normalizeDecodedCodes(decoded);\n      validQrFrames += codes.length;',
+      '      const codes = normalizeDecodedCodes(decoded);\n      if(codes.length)highScanMisses=0;\n      validQrFrames += codes.length;');
+    requirePatch(js,'    highMultiLayout = false;\n    highScanRoi = null;',
+      '    highMultiLayout = turboGridRequested===4;\n    highScanRoi = null;');
     requirePatch(js,'  function scanWithHighSpeedWorkers() {',
-      scanner+'\n  function scanWithHighSpeedWorkers() {');
+      preflightScanner+'\n  function scanWithHighSpeedWorkers() {');
     if(mode==='screen') {
       requirePatch(js,'    if (highMultiLayout) {\n      return decodeQuadFrame();',
         '    if (turboGridMode>=8) return decodeTurboGridFrame();\n    if (highMultiLayout) {\n      return decodeQuadFrame();');
@@ -24,20 +146,21 @@ export function addTurboGridReceivers(dist){
         '    if (turboGridMode>=8) {\n      decodeTurboGridFrame();\n      return;\n    }\n    if (highMultiLayout) {\n      decodeQuadFrame();');
     }
     requirePatch(js,'      for (const code of codes) acceptDecodedBytes(code.bytes);',
-      '      for (const code of codes) { noteTurboGridHit(code,origin); acceptDecodedBytes(code.bytes); }');
+      '      for (const code of codes) { if(noteTurboGridHit(code,origin))acceptDecodedBytes(code.bytes); }');
     requirePatch(js,'      if (parsed.header.layoutCodes !== 1 && parsed.header.layoutCodes !== 4) {',
       '      if (![1,4,8,16].includes(parsed.header.layoutCodes)) {');
     requirePatch(js,'      if (parsed.header.layoutCodes === 4) highMultiLayout = true;',
       '      if (parsed.header.layoutCodes >= 4) highMultiLayout = true;\n' +
       '      if (parsed.header.layoutCodes >= 8) {\n' +
-      '        turboGridMode=parsed.header.layoutCodes;\n' +
-      '        const control=document.getElementById("turboGridMode");\n' +
-      '        if(control)control.value=String(turboGridMode);\n' +
+      '        if(!turboGridRequested)turboGridMode=parsed.header.layoutCodes;\n' +
       '      }');
     requirePatch(html,'<div class="fps-switch"',
       '<label class="turbo-grid-picker">QR grid <select id="turboGridMode" aria-label="Number of QR codes to scan">'+
-      '<option value="auto">Auto detect</option><option value="8">8 codes · 4 × 2</option>'+
+      '<option value="auto">Auto detect</option><option value="1">1 code</option>'+
+      '<option value="4">4 codes · 2 × 2</option><option value="8">8 codes · 4 × 2</option>'+
       '<option value="16">16 codes · 4 × 4</option></select></label>'+
+      '<button type="button" class="small turbo-grid-rescan" id="turboGridRescan" aria-label="Rescan QR grid" title="Clear detected QR slots and scan again">↻ Rescan</button>'+
+      '<span id="turboGridStatus" class="turbo-grid-status" role="status" aria-live="polite" data-ready="true" data-seen="0">Auto-detect is active.</span>'+
       '<div class="fps-switch"');
   }
 }
